@@ -1,0 +1,82 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  engineType    = "library"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum YearOfStudy {
+  FIRST_YEAR
+  SECOND_YEAR
+  THIRD_YEAR
+  FOURTH_YEAR
+}
+
+enum Branch {
+  CSE
+  CSBS
+  CSD
+  CSIT
+  IT
+  AI_DS
+  AI_ML
+  ECE
+  EEE
+  MECH
+  CIVIL
+  CHEM
+  BIO
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model User {
+  id               String @id @default(cuid())
+  registrationCode String @unique // IC2K26-XXXXXX
+
+  // Personal Info
+  fullName           String
+  registrationNumber String @unique // 12-digit college ID
+  email              String @unique
+  phone              String @unique
+
+  // Academic Info
+  yearOfStudy YearOfStudy
+  branch      Branch
+  gender      Gender
+
+  // CP Handles (optional)
+  codechefHandle   String?
+  leetcodeHandle   String?
+  codeforcesHandle String?
+
+  // Payment
+  transactionId String        @unique
+  screenshotUrl String // Cloudinary URL
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([registrationNumber])
+  @@index([transactionId])
+  @@index([paymentStatus])
+}
