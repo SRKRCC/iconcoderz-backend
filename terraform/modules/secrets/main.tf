@@ -55,6 +55,42 @@ resource "aws_secretsmanager_secret_version" "cloudinary_api" {
   })
 }
 
+resource "aws_secretsmanager_secret" "jwt_config" {
+  name                    = "${var.project}/${var.environment}/jwt-config"
+  description             = "JWT configuration"
+  recovery_window_in_days = 7
+
+  tags = {
+    Application = var.project
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "jwt_config" {
+  secret_id = aws_secretsmanager_secret.jwt_config.id
+  secret_string = jsonencode({
+    secret = var.jwt_secret
+  })
+}
+
+resource "aws_secretsmanager_secret" "client_config" {
+  name                    = "${var.project}/${var.environment}/client-config"
+  description             = "Client URL configuration"
+  recovery_window_in_days = 7
+
+  tags = {
+    Application = var.project
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "client_config" {
+  secret_id = aws_secretsmanager_secret.client_config.id
+  secret_string = jsonencode({
+    base_url = var.base_url_client
+  })
+}
+
 variable "project" {}
 variable "environment" {}
 variable "database_url" {}
@@ -64,6 +100,8 @@ variable "smtp_pass" {}
 variable "cloudinary_cloud_name" {}
 variable "cloudinary_api_key" {}
 variable "cloudinary_api_secret" {}
+variable "jwt_secret" {}
+variable "base_url_client" {}
 
 output "database_url_arn" {
   value = aws_secretsmanager_secret.database_url.arn
@@ -75,4 +113,12 @@ output "smtp_credentials_arn" {
 
 output "cloudinary_api_arn" {
   value = aws_secretsmanager_secret.cloudinary_api.arn
+}
+
+output "jwt_config_arn" {
+  value = aws_secretsmanager_secret.jwt_config.arn
+}
+
+output "client_config_arn" {
+  value = aws_secretsmanager_secret.client_config.arn
 }

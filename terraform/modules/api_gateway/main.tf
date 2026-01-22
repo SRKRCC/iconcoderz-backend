@@ -1,6 +1,24 @@
 resource "aws_apigatewayv2_api" "http_api" {
-  name          = "${var.project}-${var.environment}-api"
+  name          = "${var.project}-${var.environment}"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = [
+      "https://iconcoderz.srkrcodingclub.in",
+      "http://localhost:5173",
+    ]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+    allow_headers = [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin"
+    ]
+    expose_headers = ["Content-Length", "Content-Type"]
+    max_age        = 7200
+    allow_credentials = true
+  }
 }
 
 resource "aws_apigatewayv2_stage" "default" {

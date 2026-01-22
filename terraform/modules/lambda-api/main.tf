@@ -1,12 +1,12 @@
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "${path.root}/../dist"
+  source_dir  = "${path.root}/../../../dist"
   output_path = "${path.module}/lambda.zip"
   excludes    = ["node_modules"]
 }
 
 resource "aws_lambda_function" "api" {
-  function_name    = "${var.project}-${var.environment}-api"
+  function_name    = "${var.project}-${var.environment}"
   filename         = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 

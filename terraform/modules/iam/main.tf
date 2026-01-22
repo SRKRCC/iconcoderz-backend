@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_execution" {
-  name = "${var.project}-${var.environment}-lambda-execution-role"
+  name = "${var.project}-${var.environment}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -16,7 +16,7 @@ resource "aws_iam_role" "lambda_execution" {
 }
 
 resource "aws_iam_role_policy" "lambda_cloudwatch_logs" {
-  name = "${var.project}-${var.environment}-lambda-logs"
+  name = "${var.project}-${var.environment}-logs"
   role = aws_iam_role.lambda_execution.id
 
   policy = jsonencode({
@@ -24,13 +24,13 @@ resource "aws_iam_role_policy" "lambda_cloudwatch_logs" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-      Resource = "arn:aws:logs:ap-south-1:*:log-group:/aws/lambda/${var.project}-${var.environment}-*:*"
+      Resource = "arn:aws:logs:ap-south-1:*:log-group:/aws/lambda/${var.project}-${var.environment}*:*"
     }]
   })
 }
 
 resource "aws_iam_role_policy" "lambda_secrets" {
-  name = "${var.project}-${var.environment}-lambda-secrets"
+  name = "${var.project}-${var.environment}-secrets"
   role = aws_iam_role.lambda_execution.id
 
   policy = jsonencode({

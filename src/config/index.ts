@@ -68,21 +68,37 @@ export async function initConfig() {
   if (config.env === 'production') {
     console.log('Fetching secrets from AWS Secrets Manager...');
     
-    const dbSecrets = await getSecret('iconcoderz/db-url');
+    const dbSecrets = await getSecret('iconcoderz/prod/db-url');
     if (dbSecrets && dbSecrets.url) config.db.url = dbSecrets.url;
 
-    const cloudinarySecrets = await getSecret('iconcoderz/cloudinary-api');
+    const cloudinarySecrets = await getSecret('iconcoderz/prod/cloudinary-api');
     if (cloudinarySecrets) {
       config.services.cloudinary.cloudName = cloudinarySecrets.cloud_name;
       config.services.cloudinary.apiKey = cloudinarySecrets.api_key;
       config.services.cloudinary.apiSecret = cloudinarySecrets.api_secret;
     }
 
-    const smtpSecrets = await getSecret('iconcoderz/smtp-credentials');
+    const smtpSecrets = await getSecret('iconcoderz/prod/smtp-credentials');
     if (smtpSecrets) {
       config.services.smtp.host = smtpSecrets.host;
       config.services.smtp.user = smtpSecrets.user;
       config.services.smtp.pass = smtpSecrets.password;
+    }
+
+    const jwtSecrets = await getSecret('iconcoderz/prod/jwt-config');
+    if (jwtSecrets && jwtSecrets.secret) {
+      config.jwt.secret = jwtSecrets.secret;
+    }
+
+    const clientSecrets = await getSecret('iconcoderz/prod/client-config');
+    if (clientSecrets && clientSecrets.base_url) {
+      config.clientUrl = clientSecrets.base_url;
+      // Update CORS origins with production client URL
+      config.cors.origin = [
+        clientSecrets.base_url,
+        'https://www.iconcoderz.srkrcodingclub.in',
+        'https://iconcoderz.srkrcodingclub.in',
+      ];
     }
   }
 
