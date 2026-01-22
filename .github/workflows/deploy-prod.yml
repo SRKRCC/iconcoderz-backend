@@ -50,7 +50,20 @@ jobs:
         AWS_REGION: ap-south-1
 
     - name: Terraform Apply
-      run: terraform apply -auto-approve -var-file=terraform.tfvars
+      run: |
+        terraform apply -auto-approve \
+          -var="project=iconcoderz" \
+          -var="environment=prod" \
+          -var="aws_region=ap-south-1" \
+          -var="database_url=${{ secrets.DATABASE_URL }}" \
+          -var="smtp_host=${{ secrets.SMTP_HOST }}" \
+          -var="smtp_user=${{ secrets.SMTP_USER }}" \
+          -var="smtp_pass=${{ secrets.SMTP_PASS }}" \
+          -var="cloudinary_cloud_name=${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
+          -var="cloudinary_api_key=${{ secrets.CLOUDINARY_API_KEY }}" \
+          -var="cloudinary_api_secret=${{ secrets.CLOUDINARY_API_SECRET }}" \
+          -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+          -var="base_url_client=${{ secrets.BASE_URL_CLIENT }}"
       working-directory: ./terraform/environments/prod
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
