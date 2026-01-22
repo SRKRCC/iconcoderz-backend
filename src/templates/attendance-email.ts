@@ -36,7 +36,7 @@ export const generateAttendanceEmailHTML = (user: AttendanceEmailData): string =
       </h2>
       
       <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-        <strong>Thanks for attending IconCoderz 2K26!</strong> 🎊
+        <strong>Thanks for attending IconCoderz 2K26!</strong> 
       </p>
 
       <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
@@ -46,30 +46,20 @@ export const generateAttendanceEmailHTML = (user: AttendanceEmailData): string =
       <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 25px 0; border-radius: 4px;">
         <p style="color: #333333; margin: 0; font-size: 16px; line-height: 1.6;">
           <strong>Event Details:</strong><br>
-          📅 Date: ${EVENT_DATE}<br>
-          📍 Venue: ${EVENT_VENUE}<br>
-          ⏰ Time: ${EVENT_TIME}
+          Date: ${EVENT_DATE}<br>
+          Venue: ${EVENT_VENUE}<br>
+          Time: ${EVENT_TIME}
         </p>
       </div>
 
+      
       <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-        <strong>What to expect:</strong>
-      </p>
-      <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 10px 0 20px 20px;">
-        <li>🏆 Competitive coding challenges</li>
-        <li>💡 Problem-solving workshops</li>
-        <li>🎁 Amazing prizes and goodies</li>
-        <li>🤝 Networking opportunities</li>
-        <li>🍕 Refreshments and lunch</li>
-      </ul>
-
-      <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-        Make sure to bring your laptop, charger, and enthusiasm! If you have any questions, feel free to reach out to our team.
+        If you have any questions, feel free to reach out to our team.
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
         <p style="color: #667eea; font-size: 20px; font-weight: 600; margin: 10px 0;">
-          Good luck and happy coding! 💻✨
+          Good luck and happy coding!!
         </p>
       </div>
     </div>
