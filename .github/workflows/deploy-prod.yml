@@ -72,10 +72,29 @@ jobs:
 
     - name: Deploy Lambda Code
       run: |
-        zip -r lambda.zip dist node_modules src/generated package.json
+        # Install production dependencies only
+        pnpm install --prod --frozen-lockfile
+        
+        # Create deployment package (quiet mode)
+        zip -rq lambda.zip \
+          dist \
+          node_modules \
+          src/generated \
+          package.json \
+          -x "node_modules/@types/*" \
+          -x "node_modules/typescript/*" \
+          -x "*.ts" \
+          -x "*.map"
+        
+        # Upload to S3
+        aws s3 cp lambda.zip s3://iconcoderz-terraform-state/lambda-deployments/lambda-$(date +%Y%m%d-%H%M%S).zip
+        aws s3 cp lambda.zip s3://iconcoderz-terraform-state/lambda-deployments/lambda-latest.zip
+        
+        # Update Lambda from S3
         aws lambda update-function-code \
           --function-name iconcoderz-prod \
-          --zip-file fileb://lambda.zip
+          --s3-bucket iconcoderz-terraform-state \
+          --s3-key lambda-deployments/lambda-latest.zip
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
