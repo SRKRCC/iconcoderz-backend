@@ -28,7 +28,7 @@ export class AdminService {
         role: 'admin' 
       },
       config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
+      { expiresIn: '7d' }
     );
 
     return {

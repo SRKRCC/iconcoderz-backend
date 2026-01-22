@@ -14,7 +14,7 @@ export class AdminController {
     }
   }
 
-  static async getDashboardStats(req: Request, res: Response, next: NextFunction) {
+  static async getDashboardStats(_req: Request, res: Response, next: NextFunction) {
     try {
       const stats = await AdminService.getDashboardStats();
       sendResponse(res, 200, 'Dashboard stats retrieved', stats);
@@ -43,7 +43,7 @@ export class AdminController {
   static async getUserById(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const user = await AdminService.getUserById(id);
+      const user = await AdminService.getUserById(id as string);
       sendResponse(res, 200, 'User retrieved successfully', user);
     } catch (error) {
       next(error);
@@ -59,10 +59,10 @@ export class AdminController {
         return sendResponse(res, 400, 'Invalid payment status');
       }
 
-      const user = await AdminService.updatePaymentStatus(id, status);
-      sendResponse(res, 200, 'Payment status updated successfully', user);
+      const user = await AdminService.updatePaymentStatus(id as string, status);
+      return sendResponse(res, 200, 'Payment status updated successfully', user);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 }

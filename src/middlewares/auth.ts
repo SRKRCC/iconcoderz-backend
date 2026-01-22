@@ -18,12 +18,13 @@ export const authenticateAdmin = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return sendError(res, 401, 'Authentication required');
+      sendError(res, 401, 'Authentication required');
+      return;
     }
 
     const token = authHeader.substring(7);
@@ -33,7 +34,7 @@ export const authenticateAdmin = async (
       req.admin = decoded;
       next();
     } catch (error) {
-      return sendError(res, 401, 'Invalid or expired token');
+      sendError(res, 401, 'Invalid or expired token');
     }
   } catch (error) {
     next(error);
