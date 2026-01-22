@@ -14,10 +14,6 @@ jobs:
       id-token: write
       contents: read
 
-    defaults:
-      run:
-        working-directory: ./terraform
-
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -41,14 +37,13 @@ jobs:
 
     - name: Build Application
       run: pnpm run build
-      working-directory: .
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
     - name: Terraform Init
       run: terraform init -reconfigure
-      working-directory: ./environments/prod
+      working-directory: ./terraform/environments/prod
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -56,7 +51,7 @@ jobs:
 
     - name: Terraform Apply
       run: terraform apply -auto-approve -var-file=terraform.tfvars
-      working-directory: ./environments/prod
+      working-directory: ./terraform/environments/prod
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -64,7 +59,6 @@ jobs:
 
     - name: Deploy Lambda Code
       run: |
-        cd ../..
         zip -r lambda.zip dist node_modules src/generated package.json
         aws lambda update-function-code \
           --function-name iconcoderz-prod \
@@ -73,4 +67,3 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ap-south-1
-#         # Add other vars from secrets
