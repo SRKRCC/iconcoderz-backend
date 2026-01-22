@@ -115,7 +115,8 @@ jobs:
           -var="cloudinary_api_key=${{ secrets.CLOUDINARY_API_KEY }}" \
           -var="cloudinary_api_secret=${{ secrets.CLOUDINARY_API_SECRET }}" \
           -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
-          -var="base_url_client=${{ secrets.BASE_URL_CLIENT }}"
+          -var="base_url_client=${{ secrets.BASE_URL_CLIENT }}" \
+          -var="qr_secret_key=${{ secrets.QR_SECRET_KEY }}"
       working-directory: ./terraform/environments/prod
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

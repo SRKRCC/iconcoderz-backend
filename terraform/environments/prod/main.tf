@@ -41,6 +41,7 @@ module "secrets" {
   cloudinary_api_secret = var.cloudinary_api_secret
   jwt_secret            = var.jwt_secret
   base_url_client       = var.base_url_client
+  qr_secret_key         = var.qr_secret_key
 }
 
 module "lambda_api" {
@@ -73,4 +74,8 @@ output "lambda_role_arn" {
 
 output "ecr_repository_url" {
   value = module.lambda_api.ecr_repository_url
+}
+
+output "secret_database_url_arn" {
+  value = module.secrets.database_url_arn
 }
