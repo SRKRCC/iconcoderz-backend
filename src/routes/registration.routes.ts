@@ -3,7 +3,7 @@ import { RegistrationController } from '../controllers/registration.controller.j
 
 const router: Router = Router();
 
-router.post('/register', RegistrationController.register);
+router.post('/', RegistrationController.register);
 router.get('/upload-signature', RegistrationController.getUploadSignature);
 
 export { router as registrationRoutes };

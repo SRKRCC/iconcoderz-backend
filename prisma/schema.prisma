@@ -1,7 +1,6 @@
 generator client {
-  provider      = "prisma-client-js"
+  provider      = "prisma-client"
   output        = "../src/generated/prisma"
-  engineType    = "library"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -52,7 +51,7 @@ model User {
 
   // Personal Info
   fullName           String
-  registrationNumber String @unique // 12-digit college ID
+  registrationNumber String @unique // 10-digit college ID
   email              String @unique
   phone              String @unique
 
@@ -79,4 +78,15 @@ model User {
   @@index([registrationNumber])
   @@index([transactionId])
   @@index([paymentStatus])
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
 }

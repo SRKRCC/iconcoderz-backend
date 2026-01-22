@@ -5,9 +5,10 @@ import { getSecret } from './secrets.js';
 dotenv.config();
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.enum(['development', 'production']).default('development'),
   PORT: z.string().default('3000'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  BASE_URL_CLIENT: z.string().default('http://localhost:5173'),
 });
 
 const parseEnv = () => {
@@ -27,8 +28,23 @@ const env = parseEnv();
 export const config = {
   env: env.NODE_ENV,
   port: parseInt(env.PORT, 10),
+  clientUrl: env.BASE_URL_CLIENT,
   db: {
     url: env.DATABASE_URL,
+  },
+  cors: {
+    origin: env.NODE_ENV === 'production'
+      ? [
+          'https://iconcoderz.srkrcodingclub.in',
+          'https://www.iconcoderz.srkrcodingclub.in',
+          env.BASE_URL_CLIENT,
+        ]
+      : [env.BASE_URL_CLIENT, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+    credentials: true,
+  },
+  jwt: {
+    secret: process.env.JWT_SECRET || 'srkr-iconcoderz',
+    expiresIn: '1d',
   },
   services: {
     cloudinary: {

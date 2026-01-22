@@ -3,7 +3,7 @@ import { Branch, Gender, YearOfStudy } from '../generated/prisma/client.js';
 
 export const UserSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
-  registrationNumber: z.string().regex(/^\d{12}$/, 'Registration number must be 12 digits'),
+  registrationNumber: z.string().regex(/^[a-zA-Z0-9]{10}$/, 'Registration number must be 10 alphanumeric characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().regex(/^\d{10}$/, 'Phone number must be 10 digits'),
   

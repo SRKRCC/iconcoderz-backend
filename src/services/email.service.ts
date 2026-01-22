@@ -1,50 +1,165 @@
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { config } from '../config/index.js';
+import { generateRegistrationEmailHTML, type UserData } from '../templates/registration-email.js';
+
+interface EmailQueueItem {
+  to: string;
+  userData: UserData;
+  qrCodeDataUrl: string;
+  retries: number;
+}
 
 export class EmailService {
-  static async sendConfirmation(to: string, name: string, registrationCode: string, qrCodeDataUrl: string) {
+  private static transporter: Transporter | null = null;
+  private static emailQueue: EmailQueueItem[] = [];
+  private static isProcessing = false;
+  private static readonly MAX_RETRIES = 3;
+  private static readonly RETRY_DELAY = 2000;
+  private static readonly EMAIL_DELAY = 1000;
+
+  private static getTransporter(): Transporter {
+    if (!this.transporter) {
+      if (!config.services.smtp.host || !config.services.smtp.user) {
+        throw new Error('SMTP not configured');
+      }
+
+      this.transporter = nodemailer.createTransport({
+        host: config.services.smtp.host,
+        port: 587,
+        secure: false,
+        auth: {
+          user: config.services.smtp.user,
+          pass: config.services.smtp.pass,
+        },
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5,
+      });
+
+      // Handle transporter errors
+      this.transporter.on('error', (err) => {
+        console.error('[EmailService] Transporter error:', err);
+      });
+    }
+
+    return this.transporter;
+  }
+
+  static async sendConfirmation(
+    to: string,
+    fullName: string,
+    registrationCode: string,
+    qrCodeDataUrl: string,
+    userData: Partial<UserData>
+  ) {
     if (!config.services.smtp.host || !config.services.smtp.user) {
       console.warn('[EmailService] SMTP not configured, skipping email.');
       return;
     }
 
-    const transporter = nodemailer.createTransport({
-      host: config.services.smtp.host,
-      port: 587,
-      secure: false,
-      auth: {
-        user: config.services.smtp.user,
-        pass: config.services.smtp.pass,
-      },
+    const completeUserData: UserData = {
+      fullName,
+      email: to,
+      registrationCode,
+      phone: userData.phone || '',
+      registrationNumber: userData.registrationNumber || '',
+      branch: userData.branch || '',
+      yearOfStudy: userData.yearOfStudy || '',
+      codechefHandle: userData.codechefHandle,
+      leetcodeHandle: userData.leetcodeHandle,
+      codeforcesHandle: userData.codeforcesHandle,
+    };
+
+    this.emailQueue.push({
+      to,
+      userData: completeUserData,
+      qrCodeDataUrl,
+      retries: 0,
     });
 
-    console.log(`[EmailService] Sending confirmation to ${to} (${name}) with code ${registrationCode}`);
-    
-    try {
-        const info = await transporter.sendMail({
-        from: '"IconCoderz" <no-reply@iconcoderz.srkrcodingclub.in>',
-        to,
-        subject: 'Registration Confirmed - IconCoderz 2K26',
-        html: `
-            <h1>Welcome to IconCoderz 2K26!</h1>
-            <p>Hi ${name},</p>
-            <p>Your registration is confirmed. Your ID is <strong>${registrationCode}</strong>.</p>
-            <p>Please present the attached QR code at the event entrance.</p>
-            <br/>
-            <img src="cid:qrcode" alt="QR Code" width="200"/>
-        `,
-        attachments: [
-            {
-            filename: 'qrcode.png',
-            path: qrCodeDataUrl,
-            cid: 'qrcode',
-            },
-        ],
-        });
+    console.log(`[EmailService] Email queued for ${to}. Queue size: ${this.emailQueue.length}`);
 
-        console.log('[EmailService] Message sent: %s', info.messageId);
-    } catch (err) {
-        console.error('[EmailService] Failed to send email:', err);
+    if (!this.isProcessing) {
+      this.processQueue();
+    }
+  }
+
+  private static async processQueue() {
+    if (this.isProcessing || this.emailQueue.length === 0) {
+      return;
+    }
+
+    this.isProcessing = true;
+    console.log(`[EmailService] Starting queue processing. ${this.emailQueue.length} emails in queue.`);
+
+    while (this.emailQueue.length > 0) {
+      const item = this.emailQueue[0];
+
+      try {
+        await this.sendEmail(item);
+        this.emailQueue.shift();
+        console.log(`[EmailService] Email sent successfully to ${item.to}. Remaining: ${this.emailQueue.length}`);
+
+        if (this.emailQueue.length > 0) {
+          await this.delay(this.EMAIL_DELAY);
+        }
+      } catch (error) {
+        console.error(`[EmailService] Failed to send email to ${item.to}:`, error);
+
+        item.retries++;
+        if (item.retries >= this.MAX_RETRIES) {
+          console.error(`[EmailService] Max retries reached for ${item.to}. Removing from queue.`);
+          this.emailQueue.shift();
+        } else {
+          this.emailQueue.shift();
+          this.emailQueue.push(item);
+          console.log(`[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`);
+          await this.delay(this.RETRY_DELAY);
+        }
+      }
+    }
+
+    this.isProcessing = false;
+    console.log('[EmailService] Queue processing completed.');
+  }
+
+  private static async sendEmail(item: EmailQueueItem): Promise<void> {
+    const transporter = this.getTransporter();
+    const htmlContent = generateRegistrationEmailHTML(item.userData);
+
+    const info = await transporter.sendMail({
+      from: {
+        name: 'IconCoderz 2K26',
+        address: config.services.smtp.user,
+      },
+      to: item.to,
+      subject: '🎉 Registration Confirmed - IconCoderz 2K26 | SRKR Coding Club',
+      html: htmlContent,
+      attachments: [
+        {
+          filename: `iconcoderz-qr-${item.userData.registrationCode}.png`,
+          path: item.qrCodeDataUrl,
+          cid: 'qrcode',
+        },
+      ],
+    });
+
+    console.log('[EmailService] Message sent: %s to %s', info.messageId, item.to);
+  }
+
+  private static delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // Graceful shutdown
+  static async close() {
+    if (this.transporter) {
+      await this.transporter.close();
+      this.transporter = null;
+      console.log('[EmailService] Transporter closed.');
     }
   }
 }
