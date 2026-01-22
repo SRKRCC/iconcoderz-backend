@@ -49,9 +49,11 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ap-south-1
 
-    - name: Terraform Apply
+    - name: Terraform Apply - Create ECR
       run: |
         terraform apply -auto-approve \
+          -target=module.lambda_api.aws_ecr_repository.lambda \
+          -target=module.lambda_api.aws_ecr_lifecycle_policy.lambda \
           -var="project=iconcoderz" \
           -var="environment=prod" \
           -var="aws_region=ap-south-1" \
@@ -98,11 +100,22 @@ jobs:
       env:
         DOCKER_BUILDKIT: 1
 
-    - name: Update Lambda Function
+    - name: Terraform Apply - Create Lambda and API Gateway
       run: |
-        aws lambda update-function-code \
-          --function-name iconcoderz-prod \
-          --image-uri ${{ steps.ecr.outputs.url }}:latest
+        terraform apply -auto-approve \
+          -var="project=iconcoderz" \
+          -var="environment=prod" \
+          -var="aws_region=ap-south-1" \
+          -var="database_url=${{ secrets.DATABASE_URL }}" \
+          -var="smtp_host=${{ secrets.SMTP_HOST }}" \
+          -var="smtp_user=${{ secrets.SMTP_USER }}" \
+          -var="smtp_pass=${{ secrets.SMTP_PASS }}" \
+          -var="cloudinary_cloud_name=${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
+          -var="cloudinary_api_key=${{ secrets.CLOUDINARY_API_KEY }}" \
+          -var="cloudinary_api_secret=${{ secrets.CLOUDINARY_API_SECRET }}" \
+          -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+          -var="base_url_client=${{ secrets.BASE_URL_CLIENT }}"
+      working-directory: ./terraform/environments/prod
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
