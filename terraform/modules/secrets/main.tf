@@ -91,6 +91,24 @@ resource "aws_secretsmanager_secret_version" "client_config" {
   })
 }
 
+resource "aws_secretsmanager_secret" "qr_config" {
+  name                    = "${var.project}/${var.environment}/qr-config"
+  description             = "QR code secret key for verification"
+  recovery_window_in_days = 7
+
+  tags = {
+    Application = var.project
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "qr_config" {
+  secret_id = aws_secretsmanager_secret.qr_config.id
+  secret_string = jsonencode({
+    secret_key = var.qr_secret_key
+  })
+}
+
 variable "project" {}
 variable "environment" {}
 variable "database_url" {}
@@ -102,6 +120,7 @@ variable "cloudinary_api_key" {}
 variable "cloudinary_api_secret" {}
 variable "jwt_secret" {}
 variable "base_url_client" {}
+variable "qr_secret_key" {}
 
 output "database_url_arn" {
   value = aws_secretsmanager_secret.database_url.arn
@@ -121,4 +140,8 @@ output "jwt_config_arn" {
 
 output "client_config_arn" {
   value = aws_secretsmanager_secret.client_config.arn
+}
+
+output "qr_config_arn" {
+  value = aws_secretsmanager_secret.qr_config.arn
 }

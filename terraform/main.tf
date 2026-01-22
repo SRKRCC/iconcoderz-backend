@@ -16,6 +16,9 @@ module "secrets" {
   cloudinary_cloud_name = var.cloudinary_cloud_name
   cloudinary_api_key    = var.cloudinary_api_key
   cloudinary_api_secret = var.cloudinary_api_secret
+  jwt_secret            = var.jwt_secret
+  base_url_client       = var.base_url_client
+  qr_secret_key         = var.qr_secret_key
 }
 
 module "lambda_api" {

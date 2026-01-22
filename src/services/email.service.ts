@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { config } from '../config/index.js';
 import { generateRegistrationEmailHTML, type UserData } from '../templates/registration-email.js';
+import { generateAttendanceEmailHTML, type AttendanceEmailData } from '../templates/attendance-email.js';
 
 interface EmailQueueItem {
   to: string;
@@ -10,10 +11,18 @@ interface EmailQueueItem {
   retries: number;
 }
 
+interface AttendanceEmailQueueItem {
+  to: string;
+  fullName: string;
+  retries: number;
+}
+
 export class EmailService {
   private static transporter: Transporter | null = null;
   private static emailQueue: EmailQueueItem[] = [];
+  private static attendanceQueue: AttendanceEmailQueueItem[] = [];
   private static isProcessing = false;
+  private static isProcessingAttendance = false;
   private static readonly MAX_RETRIES = 3;
   private static readonly RETRY_DELAY = 2000;
   private static readonly EMAIL_DELAY = 1000;
@@ -152,6 +161,85 @@ export class EmailService {
 
   private static delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  static async sendAttendanceConfirmation(to: string, fullName: string) {
+    if (!config.services.smtp.host || !config.services.smtp.user) {
+      console.warn('[EmailService] SMTP not configured, skipping attendance email.');
+      return;
+    }
+
+    this.attendanceQueue.push({
+      to,
+      fullName,
+      retries: 0,
+    });
+
+    console.log(`[EmailService] Attendance email queued for ${to}. Queue size: ${this.attendanceQueue.length}`);
+
+    if (!this.isProcessingAttendance) {
+      this.processAttendanceQueue();
+    }
+  }
+
+  private static async processAttendanceQueue() {
+    if (this.isProcessingAttendance || this.attendanceQueue.length === 0) {
+      return;
+    }
+
+    this.isProcessingAttendance = true;
+    console.log(`[EmailService] Starting attendance queue processing. ${this.attendanceQueue.length} emails in queue.`);
+
+    while (this.attendanceQueue.length > 0) {
+      const item = this.attendanceQueue[0];
+
+      try {
+        await this.sendAttendanceEmail(item);
+        this.attendanceQueue.shift();
+        console.log(`[EmailService] Attendance email sent successfully to ${item.to}. Remaining: ${this.attendanceQueue.length}`);
+
+        if (this.attendanceQueue.length > 0) {
+          await this.delay(this.EMAIL_DELAY);
+        }
+      } catch (error) {
+        console.error(`[EmailService] Failed to send attendance email to ${item.to}:`, error);
+
+        item.retries++;
+        if (item.retries >= this.MAX_RETRIES) {
+          console.error(`[EmailService] Max retries reached for ${item.to}. Removing from queue.`);
+          this.attendanceQueue.shift();
+        } else {
+          this.attendanceQueue.shift();
+          this.attendanceQueue.push(item);
+          console.log(`[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`);
+          await this.delay(this.RETRY_DELAY);
+        }
+      }
+    }
+
+    this.isProcessingAttendance = false;
+    console.log('[EmailService] Attendance queue processing completed.');
+  }
+
+  private static async sendAttendanceEmail(item: AttendanceEmailQueueItem): Promise<void> {
+    const transporter = this.getTransporter();
+    const userData: AttendanceEmailData = {
+      fullName: item.fullName,
+      email: item.to,
+    };
+    const htmlContent = generateAttendanceEmailHTML(userData);
+
+    const info = await transporter.sendMail({
+      from: {
+        name: 'IconCoderz 2K26',
+        address: config.services.smtp.user,
+      },
+      to: item.to,
+      subject: '🎉 Welcome to IconCoderz 2K26! Thanks for Attending',
+      html: htmlContent,
+    });
+
+    console.log('[EmailService] Attendance email sent: %s to %s', info.messageId, item.to);
   }
 
   // Graceful shutdown

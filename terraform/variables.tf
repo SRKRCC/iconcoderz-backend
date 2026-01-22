@@ -35,3 +35,4 @@ variable "smtp_pass" {}
 variable "cloudinary_cloud_name" {}
 variable "cloudinary_api_key" {}
 variable "cloudinary_api_secret" {}
+variable "qr_secret_key" {}

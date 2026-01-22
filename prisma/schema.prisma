@@ -70,14 +70,23 @@ model User {
   screenshotUrl String // Cloudinary URL
   paymentStatus PaymentStatus @default(PENDING)
 
+  // Attendance
+  attended      Boolean   @default(false)
+  attendedAt    DateTime?
+  attendedBy    String?
+  checkInCount  Int       @default(0)
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  attendanceLogs AttendanceLog[]
 
   @@index([email])
   @@index([registrationNumber])
   @@index([transactionId])
   @@index([paymentStatus])
+  @@index([attended])
 }
 
 model Admin {
@@ -88,5 +97,23 @@ model Admin {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  attendanceLogs AttendanceLog[]
+
   @@index([email])
+}
+
+model AttendanceLog {
+  id             String   @id @default(cuid())
+  registrationId String
+  adminId        String
+  scannedAt      DateTime @default(now())
+  ipAddress      String?
+  deviceInfo     String?
+
+  user  User  @relation(fields: [registrationId], references: [id])
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@index([registrationId])
+  @@index([adminId])
+  @@index([scannedAt])
 }

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { config } from './config/index.js';
 import { registrationRoutes } from './routes/registration.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
+import attendanceRoutes from './routes/attendance.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { Logger } from './utils/logger.js';
 
@@ -50,6 +51,7 @@ app.use((req, res, next) => {
 
 app.use('/api/v1/registration', registrationRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
 
 app.get('/api/v1/health', (_req, res) => {
   res.json({

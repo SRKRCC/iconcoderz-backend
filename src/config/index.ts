@@ -46,6 +46,9 @@ export const config = {
     secret: process.env.JWT_SECRET || 'srkr-iconcoderz',
     expiresIn: '1d',
   },
+  qr: {
+    secretKey: process.env.QR_SECRET_KEY || 'iconcoderz-secret-2026',
+  },
   services: {
     cloudinary: {
       cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
@@ -99,6 +102,11 @@ export async function initConfig() {
         'https://www.iconcoderz.srkrcodingclub.in',
         'https://iconcoderz.srkrcodingclub.in',
       ];
+    }
+
+    const qrSecrets = await getSecret('iconcoderz/prod/qr-config');
+    if (qrSecrets && qrSecrets.secret_key) {
+      config.qr.secretKey = qrSecrets.secret_key;
     }
   }
 

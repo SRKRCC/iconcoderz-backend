@@ -46,7 +46,7 @@ export class RegistrationService {
       },
     });
 
-    const qrCode = await QRService.generate(user.registrationCode);
+    const qrCode = await QRService.generate(user.registrationCode, user.id);
 
     EmailService.sendConfirmation(
       user.email,
