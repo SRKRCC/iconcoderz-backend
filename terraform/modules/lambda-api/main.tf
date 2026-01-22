@@ -43,7 +43,7 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      NODE_ENV     = var.environment
+      NODE_ENV     = "production"
       DATABASE_URL = var.database_url
     }
   }
