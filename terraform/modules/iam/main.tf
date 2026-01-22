@@ -43,6 +43,24 @@ resource "aws_iam_role_policy" "lambda_secrets" {
   })
 }
 
+resource "aws_iam_role_policy" "lambda_ecr" {
+  name = "${var.project}-${var.environment}-ecr"
+  role = aws_iam_role.lambda_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:BatchCheckLayerAvailability"
+      ]
+      Resource = "arn:aws:ecr:ap-south-1:*:repository/${var.project}-${var.environment}"
+    }]
+  })
+}
+
 output "lambda_role_arn" {
   value = aws_iam_role.lambda_execution.arn
 }

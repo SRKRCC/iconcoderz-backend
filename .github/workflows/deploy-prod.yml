@@ -70,31 +70,39 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ap-south-1
 
-    - name: Deploy Lambda Code
+    - name: Get ECR Repository URL
+      id: ecr
       run: |
-        # Install production dependencies only
-        pnpm install --prod --frozen-lockfile
-        
-        # Create deployment package (quiet mode)
-        zip -rq lambda.zip \
-          dist \
-          node_modules \
-          src/generated \
-          package.json \
-          -x "node_modules/@types/*" \
-          -x "node_modules/typescript/*" \
-          -x "*.ts" \
-          -x "*.map"
-        
-        # Upload to S3
-        aws s3 cp lambda.zip s3://iconcoderz-terraform-state/lambda-deployments/lambda-$(date +%Y%m%d-%H%M%S).zip
-        aws s3 cp lambda.zip s3://iconcoderz-terraform-state/lambda-deployments/lambda-latest.zip
-        
-        # Update Lambda from S3
+        ECR_URL=$(terraform output -raw ecr_repository_url)
+        echo "url=$ECR_URL" >> $GITHUB_OUTPUT
+      working-directory: ./terraform/environments/prod
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ap-south-1
+
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ steps.ecr.outputs.url }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ap-south-1
+
+    - name: Build and Push Docker Image
+      run: |
+        docker build -t ${{ steps.ecr.outputs.url }}:${{ github.sha }} .
+        docker tag ${{ steps.ecr.outputs.url }}:${{ github.sha }} ${{ steps.ecr.outputs.url }}:latest
+        docker push ${{ steps.ecr.outputs.url }}:${{ github.sha }}
+        docker push ${{ steps.ecr.outputs.url }}:latest
+      env:
+        DOCKER_BUILDKIT: 1
+
+    - name: Update Lambda Function
+      run: |
         aws lambda update-function-code \
           --function-name iconcoderz-prod \
-          --s3-bucket iconcoderz-terraform-state \
-          --s3-key lambda-deployments/lambda-latest.zip
+          --image-uri ${{ steps.ecr.outputs.url }}:latest
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

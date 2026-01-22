@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Environment variables
+.env
+.env.*
+
+# Terraform
+terraform
+*.tfstate
+*.tfstate.*
+.terraform
+.terraform.lock.hcl
+
+# GitHub
+.github
+
+# Git
+.git
+.gitignore
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Tests
+tests
+__tests__
+*.test.ts
+*.spec.ts
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+coverage
+.nyc_output
+*.zip

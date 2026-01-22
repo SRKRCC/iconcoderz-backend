@@ -70,3 +70,7 @@ output "lambda_function_name" {
 output "lambda_role_arn" {
   value = module.iam.lambda_role_arn
 }
+
+output "ecr_repository_url" {
+  value = module.lambda_api.ecr_repository_url
+}
