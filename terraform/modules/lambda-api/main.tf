@@ -21,9 +21,9 @@ resource "aws_ecr_lifecycle_policy" "lambda" {
       rulePriority = 1
       description  = "Keep last 5 images"
       selection = {
-        tagStatus     = "any"
-        countType     = "imageCountMoreThan"
-        countNumber   = 5
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 5
       }
       action = {
         type = "expire"
@@ -35,7 +35,7 @@ resource "aws_ecr_lifecycle_policy" "lambda" {
 resource "aws_lambda_function" "api" {
   function_name = "${var.project}-${var.environment}"
   package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.lambda.repository_url}:latest"
+  image_uri     = "${aws_ecr_repository.lambda.repository_url}:${var.image_tag}"
   role          = var.role_arn
 
   timeout     = 30
@@ -46,10 +46,6 @@ resource "aws_lambda_function" "api" {
       NODE_ENV     = "production"
       DATABASE_URL = var.database_url
     }
-  }
-
-  lifecycle {
-    ignore_changes = [image_uri]
   }
 }
 
@@ -69,3 +65,4 @@ variable "project" {}
 variable "environment" {}
 variable "role_arn" {}
 variable "database_url" {}
+variable "image_tag" {}

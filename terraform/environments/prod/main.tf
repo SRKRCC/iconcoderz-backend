@@ -1,12 +1,12 @@
 terraform {
   required_version = ">= 1.5.0"
-  
+
   backend "s3" {
-    bucket         = "iconcoderz-terraform-state"
-    key            = "prod/terraform.tfstate"
-    region         = "ap-south-1"
-    encrypt        = true
-    use_lockfile   = true
+    bucket       = "iconcoderz-terraform-state"
+    key          = "prod/terraform.tfstate"
+    region       = "ap-south-1"
+    encrypt      = true
+    use_lockfile = true
   }
 
   required_providers {
@@ -50,6 +50,7 @@ module "lambda_api" {
   environment  = var.environment
   role_arn     = module.iam.lambda_role_arn
   database_url = var.database_url
+  image_tag    = var.image_tag
 }
 
 module "api_gateway" {

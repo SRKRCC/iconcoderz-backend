@@ -3,7 +3,8 @@ variable "project" {
 }
 
 variable "environment" {
-  type = string
+  type    = string
+  default = "default"
 }
 
 variable "aws_region" {
@@ -54,4 +55,8 @@ variable "base_url_client" {
 variable "qr_secret_key" {
   type      = string
   sensitive = true
+}
+
+variable "image_tag" {
+  type = string
 }

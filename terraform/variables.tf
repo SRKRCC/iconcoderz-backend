@@ -13,7 +13,7 @@ variable "project" {
 variable "environment" {
   description = "Environment (dev/prod)"
   type        = string
-  default     = "dev"
+  default     = "default"
 }
 
 variable "database_url" {
