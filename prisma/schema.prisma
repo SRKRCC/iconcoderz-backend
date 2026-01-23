@@ -71,14 +71,17 @@ model User {
   paymentStatus PaymentStatus @default(PENDING)
 
   // Attendance
-  attended      Boolean   @default(false)
-  attendedAt    DateTime?
-  attendedBy    String?
-  checkInCount  Int       @default(0)
+  attended     Boolean   @default(false)
+  attendedAt   DateTime?
+  attendedBy   String?
+  checkInCount Int       @default(0)
 
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Full-text search vector (populated via trigger)
+  searchVector Unsupported("tsvector")?
 
   attendanceLogs AttendanceLog[]
 
@@ -87,6 +90,10 @@ model User {
   @@index([transactionId])
   @@index([paymentStatus])
   @@index([attended])
+  @@index([branch])
+  @@index([yearOfStudy])
+  @@index([createdAt])
+  @@index([branch, yearOfStudy, paymentStatus])
 }
 
 model Admin {

@@ -1,6 +1,7 @@
 import { prisma } from '../utils/prisma.js';
 import { QRService } from './qr.service.js';
 import { ManualCheckInInput } from '../dtos/attendance.dto.js';
+import { cache, CacheKeys, CacheTTL } from '../utils/cache.js';
 
 interface QRPayload {
   registrationCode: string;
@@ -167,22 +168,28 @@ export class AttendanceService {
   }
 
   static async getStats() {
-    const [total, attended, verified] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { attended: true } }),
-      prisma.user.count({ where: { paymentStatus: 'VERIFIED' } }),
-    ]);
+    return cache.getOrCompute(
+      CacheKeys.ATTENDANCE_STATS,
+      CacheTTL.ATTENDANCE_STATS,
+      async () => {
+        const [total, attended, verified] = await Promise.all([
+          prisma.user.count(),
+          prisma.user.count({ where: { attended: true } }),
+          prisma.user.count({ where: { paymentStatus: 'VERIFIED' } }),
+        ]);
 
-    const pending = verified - attended;
-    const attendanceRate = verified > 0 ? Math.round((attended / verified) * 100) : 0;
+        const pending = verified - attended;
+        const attendanceRate = verified > 0 ? Math.round((attended / verified) * 100) : 0;
 
-    return {
-      total,
-      verified,
-      attended,
-      pending,
-      attendanceRate,
-    };
+        return {
+          total,
+          verified,
+          attended,
+          pending,
+          attendanceRate,
+        };
+      }
+    );
   }
 
   static async getRecentScans(limit: number = 10) {

@@ -3,8 +3,8 @@ export interface AttendanceEmailData {
   email: string;
 }
 
-const EVENT_DATE = 'January 24-25, 2026';
-const EVENT_TIME = '9:00 AM onwards';
+const EVENT_DATE = 'February 23, 2026';
+const EVENT_TIME = '1:30 PM onwards';
 const EVENT_VENUE = 'SRKR Engineering College';
 
 export const generateAttendanceEmailHTML = (user: AttendanceEmailData): string => {
@@ -25,7 +25,7 @@ export const generateAttendanceEmailHTML = (user: AttendanceEmailData): string =
         <img src="https://srkrcodingclub.in/logonobg.png" alt="SRKR Coding Club" style="width: 80px; height: auto;" />
       </div>
       <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
-        🎉 Welcome to IconCoderz 2K26! 🎉
+        🎉 Welcome to IconCoderz 2K26!
       </h1>
     </div>
 

@@ -20,6 +20,7 @@ export const generateRegistrationEmailHTML = (user: UserData): string => {
     FIRST_YEAR: '1st Year',
     SECOND_YEAR: '2nd Year',
     THIRD_YEAR: '3rd Year',
+    FOURTH_YEAR: '4th Year',
   };
 
   const cpHandles = [

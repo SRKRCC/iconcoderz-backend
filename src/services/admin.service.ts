@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AdminLoginInput } from '../dtos/admin.dto.js';
 import { config } from '../config/index.js';
+import { cache, CacheKeys, CacheTTL } from '../utils/cache.js';
 
 export class AdminService {
   static async login(data: AdminLoginInput) {
@@ -56,6 +57,48 @@ export class AdminService {
     yearOfStudy?: string;
     search?: string;
   }) {
+    if (filters?.search && filters.search.trim()) {
+      const searchTerms = filters.search.trim().split(/\s+/).join(' & ');
+      
+      const conditions: string[] = [];
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      conditions.push(`"searchVector" @@ to_tsquery('english', $${paramIndex})`);
+      params.push(searchTerms);
+      paramIndex++;
+
+      if (filters.paymentStatus) {
+        conditions.push(`"paymentStatus" = $${paramIndex}::"PaymentStatus"`);
+        params.push(filters.paymentStatus);
+        paramIndex++;
+      }
+      if (filters.branch) {
+        conditions.push(`"branch" = $${paramIndex}::"Branch"`);
+        params.push(filters.branch);
+        paramIndex++;
+      }
+      if (filters.yearOfStudy) {
+        conditions.push(`"yearOfStudy" = $${paramIndex}::"YearOfStudy"`);
+        params.push(filters.yearOfStudy);
+        paramIndex++;
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      // Exclude searchVector from SELECT to avoid deserialization error
+      const users = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT id, "registrationCode", "fullName", "registrationNumber", email, phone, 
+                "yearOfStudy", branch, gender, "codechefHandle", "leetcodeHandle", "codeforcesHandle",
+                "transactionId", "screenshotUrl", "paymentStatus", attended, "attendedAt", 
+                "attendedBy", "checkInCount", "createdAt", "updatedAt"
+         FROM "User" ${whereClause} ORDER BY "createdAt" DESC`,
+        ...params
+      );
+
+      return users;
+    }
+
     const where: any = {};
 
     if (filters?.paymentStatus) {
@@ -68,15 +111,6 @@ export class AdminService {
 
     if (filters?.yearOfStudy) {
       where.yearOfStudy = filters.yearOfStudy;
-    }
-
-    if (filters?.search) {
-      where.OR = [
-        { fullName: { contains: filters.search, mode: 'insensitive' } },
-        { email: { contains: filters.search, mode: 'insensitive' } },
-        { registrationNumber: { contains: filters.search, mode: 'insensitive' } },
-        { registrationCode: { contains: filters.search, mode: 'insensitive' } },
-      ];
     }
 
     const users = await prisma.user.findMany({
@@ -112,56 +146,62 @@ export class AdminService {
   }
 
   static async getDashboardStats() {
-    const [
-      totalParticipants,
-      verifiedPayments,
-      pendingPayments,
-      rejectedPayments,
-      branchDistribution,
-      yearDistribution,
-      recentRegistrations,
-    ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { paymentStatus: 'VERIFIED' } }),
-      prisma.user.count({ where: { paymentStatus: 'PENDING' } }),
-      prisma.user.count({ where: { paymentStatus: 'REJECTED' } }),
-      prisma.user.groupBy({
-        by: ['branch'],
-        _count: { branch: true },
-      }),
-      prisma.user.groupBy({
-        by: ['yearOfStudy'],
-        _count: { yearOfStudy: true },
-      }),
-      prisma.user.findMany({
-        take: 10,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          registrationCode: true,
-          fullName: true,
-          branch: true,
-          yearOfStudy: true,
-          paymentStatus: true,
-          createdAt: true,
-        },
-      }),
-    ]);
+    return cache.getOrCompute(
+      CacheKeys.DASHBOARD_STATS,
+      CacheTTL.DASHBOARD_STATS,
+      async () => {
+        const [
+          totalParticipants,
+          verifiedPayments,
+          pendingPayments,
+          rejectedPayments,
+          branchDistribution,
+          yearDistribution,
+          recentRegistrations,
+        ] = await Promise.all([
+          prisma.user.count(),
+          prisma.user.count({ where: { paymentStatus: 'VERIFIED' } }),
+          prisma.user.count({ where: { paymentStatus: 'PENDING' } }),
+          prisma.user.count({ where: { paymentStatus: 'REJECTED' } }),
+          prisma.user.groupBy({
+            by: ['branch'],
+            _count: { branch: true },
+          }),
+          prisma.user.groupBy({
+            by: ['yearOfStudy'],
+            _count: { yearOfStudy: true },
+          }),
+          prisma.user.findMany({
+            take: 10,
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              registrationCode: true,
+              fullName: true,
+              branch: true,
+              yearOfStudy: true,
+              paymentStatus: true,
+              createdAt: true,
+            },
+          }),
+        ]);
 
-    return {
-      totalParticipants,
-      verifiedPayments,
-      pendingPayments,
-      rejectedPayments,
-      branchDistribution: branchDistribution.reduce((acc, item) => {
-        acc[item.branch] = item._count.branch;
-        return acc;
-      }, {} as Record<string, number>),
-      yearDistribution: yearDistribution.reduce((acc, item) => {
-        acc[item.yearOfStudy] = item._count.yearOfStudy;
-        return acc;
-      }, {} as Record<string, number>),
-      recentRegistrations,
-    };
+        return {
+          totalParticipants,
+          verifiedPayments,
+          pendingPayments,
+          rejectedPayments,
+          branchDistribution: branchDistribution.reduce((acc, item) => {
+            acc[item.branch] = item._count.branch;
+            return acc;
+          }, {} as Record<string, number>),
+          yearDistribution: yearDistribution.reduce((acc, item) => {
+            acc[item.yearOfStudy] = item._count.yearOfStudy;
+            return acc;
+          }, {} as Record<string, number>),
+          recentRegistrations,
+        };
+      }
+    );
   }
 }
