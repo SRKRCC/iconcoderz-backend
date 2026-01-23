@@ -93,11 +93,17 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ap-south-1
 
+    - name: Get Version from package.json
+      id: package-version
+      run: |
+        VERSION=$(jq -r .version package.json)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
     - name: Build and Push Docker Image
       run: |
-        docker build -t ${{ steps.ecr.outputs.url }}:${{ github.sha }} .
-        docker tag ${{ steps.ecr.outputs.url }}:${{ github.sha }} ${{ steps.ecr.outputs.url }}:latest
-        docker push ${{ steps.ecr.outputs.url }}:${{ github.sha }}
+        docker build -t ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }} .
+        docker tag ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }} ${{ steps.ecr.outputs.url }}:latest
+        docker push ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }}
         docker push ${{ steps.ecr.outputs.url }}:latest
       env:
         DOCKER_BUILDKIT: 1
@@ -118,7 +124,7 @@ jobs:
           -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
           -var="base_url_client=${{ secrets.BASE_URL_CLIENT }}" \
           -var="qr_secret_key=${{ secrets.QR_SECRET_KEY }}" \
-          -var="image_tag=${{ github.sha }}"
+          -var="image_tag=${{ steps.package-version.outputs.version }}"
       working-directory: ./terraform/environments/prod
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

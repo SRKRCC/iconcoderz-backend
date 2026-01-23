@@ -1,7 +1,7 @@
 {
-  "name": "server",
-  "version": "1.0.0",
-  "description": "IconCoderz Backend API",
+  "name": "iconcoderz",
+  "version": "v1.0.0",
+  "description": "IconCoderz Backend",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -16,7 +16,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "SRKR Coding Club",
   "license": "ISC",
   "packageManager": "pnpm@10.28.0",
   "devDependencies": {
