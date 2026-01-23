@@ -8,7 +8,7 @@ export class AttendanceController {
   static async scanQR(req: Request, res: Response, _next: NextFunction) {
     try {
       const validatedData = scanQRSchema.parse(req.body);
-      const adminId = (req as any).user.id;
+      const adminId = (req as any).admin.id;
 
       const result = await AttendanceService.scanQR(
         validatedData.qrData,
@@ -34,7 +34,7 @@ export class AttendanceController {
   static async manualCheckIn(req: Request, res: Response, _next: NextFunction) {
     try {
       const validatedData = manualCheckInSchema.parse(req.body);
-      const adminId = (req as any).user.id;
+      const adminId = (req as any).admin.id;
 
       const result = await AttendanceService.manualCheckIn(validatedData, adminId);
 
