@@ -53,26 +53,26 @@ jobs:
       run: |
         terraform apply -auto-approve \
           -target=module.lambda_api.aws_ecr_repository.lambda \
-          -target=module.lambda_api.aws_ecr_lifecycle_policy.lambda \
-          -var="project=iconcoderz" \
-          -var="environment=prod" \
-          -var="aws_region=ap-south-1" \
-          -var="database_url=${{ secrets.DATABASE_URL }}" \
-          -var="smtp_host=${{ secrets.SMTP_HOST }}" \
-          -var="smtp_user=${{ secrets.SMTP_USER }}" \
-          -var="smtp_pass=${{ secrets.SMTP_PASS }}" \
-          -var="cloudinary_cloud_name=${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
-          -var="cloudinary_api_key=${{ secrets.CLOUDINARY_API_KEY }}" \
-          -var="cloudinary_api_secret=${{ secrets.CLOUDINARY_API_SECRET }}" \
-          -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
-          -var="base_url_client=${{ secrets.BASE_URL_CLIENT }}" \
-          -var="qr_secret_key=${{ secrets.QR_SECRET_KEY }}" \
-          -var="image_tag=${{ github.sha }}"
+          -target=module.lambda_api.aws_ecr_lifecycle_policy.lambda
       working-directory: ./terraform/environments/prod
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ap-south-1
+        TF_VAR_project: iconcoderz
+        TF_VAR_environment: prod
+        TF_VAR_aws_region: ap-south-1
+        TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+        TF_VAR_smtp_host: ${{ secrets.SMTP_HOST }}
+        TF_VAR_smtp_user: ${{ secrets.SMTP_USER }}
+        TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
+        TF_VAR_cloudinary_cloud_name: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+        TF_VAR_cloudinary_api_key: ${{ secrets.CLOUDINARY_API_KEY }}
+        TF_VAR_cloudinary_api_secret: ${{ secrets.CLOUDINARY_API_SECRET }}
+        TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+        TF_VAR_base_url_client: ${{ secrets.BASE_URL_CLIENT }}
+        TF_VAR_qr_secret_key: ${{ secrets.QR_SECRET_KEY }}
+        TF_VAR_image_tag: ${{ github.sha }}
 
     - name: Get ECR Repository URL
       id: ecr
@@ -110,23 +110,23 @@ jobs:
 
     - name: Terraform Apply - Create Lambda and API Gateway
       run: |
-        terraform apply -auto-approve \
-          -var="project=iconcoderz" \
-          -var="environment=prod" \
-          -var="aws_region=ap-south-1" \
-          -var="database_url=${{ secrets.DATABASE_URL }}" \
-          -var="smtp_host=${{ secrets.SMTP_HOST }}" \
-          -var="smtp_user=${{ secrets.SMTP_USER }}" \
-          -var="smtp_pass=${{ secrets.SMTP_PASS }}" \
-          -var="cloudinary_cloud_name=${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
-          -var="cloudinary_api_key=${{ secrets.CLOUDINARY_API_KEY }}" \
-          -var="cloudinary_api_secret=${{ secrets.CLOUDINARY_API_SECRET }}" \
-          -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
-          -var="base_url_client=${{ secrets.BASE_URL_CLIENT }}" \
-          -var="qr_secret_key=${{ secrets.QR_SECRET_KEY }}" \
-          -var="image_tag=${{ steps.package-version.outputs.version }}"
+        terraform apply -auto-approve
       working-directory: ./terraform/environments/prod
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ap-south-1
+        TF_VAR_project: iconcoderz
+        TF_VAR_environment: prod
+        TF_VAR_aws_region: ap-south-1
+        TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+        TF_VAR_smtp_host: ${{ secrets.SMTP_HOST }}
+        TF_VAR_smtp_user: ${{ secrets.SMTP_USER }}
+        TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
+        TF_VAR_cloudinary_cloud_name: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+        TF_VAR_cloudinary_api_key: ${{ secrets.CLOUDINARY_API_KEY }}
+        TF_VAR_cloudinary_api_secret: ${{ secrets.CLOUDINARY_API_SECRET }}
+        TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+        TF_VAR_base_url_client: ${{ secrets.BASE_URL_CLIENT }}
+        TF_VAR_qr_secret_key: ${{ secrets.QR_SECRET_KEY }}
+        TF_VAR_image_tag: ${{ steps.package-version.outputs.version }}
