@@ -92,47 +92,80 @@ export class EmailService {
     console.log(`[EmailService] Email queued for ${to}. Queue size: ${this.emailQueue.length}`);
 
     if (!this.isProcessing) {
-      this.processQueue();
+      await this.processQueue();
+    } else {
+      // If already processing, we need to wait until the current items + new items are processed.
+      // A simple way for this simple service is to just wait a bit or implement a proper lock/wait mechanism.
+      // However, since this is a lambda which freezes, we must ensure we don't exit.
+      // If processQueue is async and active, we can't easily "join" it without a promise reference.
+      // Let's change processQueue tracking.
+      
+      // Actually, simplest fix for "fire and forget" turning into "awaitable" 
+      // is to just await a polling loop or shared promise if complex.
+      // But given the code structure, we can just await the processing if we keep track of the processing promise?
+      
+      // Let's try to just await processQueue if called. 
+      // BUT if it's already running, calling it again might be wrong or it might return immediately.
+      
+      // Refactored approach: ALWAYS call processQueue and let it handle concurrency or just wait for queue to drain.
+      // Since sendConfirmation is called once per request usually, we can just await processQueue.
+      // But if multiple calls happen, we need to be careful.
+      // For this specific issue: just await this.processQueue().
+      // And we need to make sure multiple calls don't start multiple processors if not needed, 
+      // OR just let them run (might be fine if they just check queue length).
+      
+      // Let's stick to the plan:
+      // We will make sendConfirmation await the processing.
+      // To handle the "already processing" case without race conditions or early exit:
+      // We'll change logic to: while(queue.length > 0) { await processOne(); }
+      // This effectively means the caller will wait until *everything* current in queue is gone.
+    }
+    
+    // Waiting logic:
+    while (this.emailQueue.length > 0 || this.isProcessing) {
+        await this.delay(100);
     }
   }
 
   private static async processQueue() {
-    if (this.isProcessing || this.emailQueue.length === 0) {
+    if (this.isProcessing) {
       return;
     }
 
     this.isProcessing = true;
     console.log(`[EmailService] Starting queue processing. ${this.emailQueue.length} emails in queue.`);
 
-    while (this.emailQueue.length > 0) {
-      const item = this.emailQueue[0];
+    try {
+        while (this.emailQueue.length > 0) {
+        const item = this.emailQueue[0];
 
-      try {
-        await this.sendEmail(item);
-        this.emailQueue.shift();
-        console.log(`[EmailService] Email sent successfully to ${item.to}. Remaining: ${this.emailQueue.length}`);
+        try {
+            await this.sendEmail(item);
+            this.emailQueue.shift();
+            console.log(`[EmailService] Email sent successfully to ${item.to}. Remaining: ${this.emailQueue.length}`);
 
-        if (this.emailQueue.length > 0) {
-          await this.delay(this.EMAIL_DELAY);
+            if (this.emailQueue.length > 0) {
+            await this.delay(this.EMAIL_DELAY);
+            }
+        } catch (error) {
+            console.error(`[EmailService] Failed to send email to ${item.to}:`, error);
+
+            item.retries++;
+            if (item.retries >= this.MAX_RETRIES) {
+            console.error(`[EmailService] Max retries reached for ${item.to}. Removing from queue.`);
+            this.emailQueue.shift();
+            } else {
+            this.emailQueue.shift();
+            this.emailQueue.push(item);
+            console.log(`[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`);
+            await this.delay(this.RETRY_DELAY);
+            }
         }
-      } catch (error) {
-        console.error(`[EmailService] Failed to send email to ${item.to}:`, error);
-
-        item.retries++;
-        if (item.retries >= this.MAX_RETRIES) {
-          console.error(`[EmailService] Max retries reached for ${item.to}. Removing from queue.`);
-          this.emailQueue.shift();
-        } else {
-          this.emailQueue.shift();
-          this.emailQueue.push(item);
-          console.log(`[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`);
-          await this.delay(this.RETRY_DELAY);
         }
-      }
+    } finally {
+        this.isProcessing = false;
+        console.log('[EmailService] Queue processing completed.');
     }
-
-    this.isProcessing = false;
-    console.log('[EmailService] Queue processing completed.');
   }
 
   private static async sendEmail(item: EmailQueueItem): Promise<void> {
@@ -178,47 +211,54 @@ export class EmailService {
     console.log(`[EmailService] Attendance email queued for ${to}. Queue size: ${this.attendanceQueue.length}`);
 
     if (!this.isProcessingAttendance) {
-      this.processAttendanceQueue();
+      await this.processAttendanceQueue();
+    }
+    
+    // Waiting logic:
+    while (this.attendanceQueue.length > 0 || this.isProcessingAttendance) {
+        await this.delay(100);
     }
   }
 
   private static async processAttendanceQueue() {
-    if (this.isProcessingAttendance || this.attendanceQueue.length === 0) {
+    if (this.isProcessingAttendance) {
       return;
     }
 
     this.isProcessingAttendance = true;
     console.log(`[EmailService] Starting attendance queue processing. ${this.attendanceQueue.length} emails in queue.`);
 
-    while (this.attendanceQueue.length > 0) {
-      const item = this.attendanceQueue[0];
+    try {
+        while (this.attendanceQueue.length > 0) {
+        const item = this.attendanceQueue[0];
 
-      try {
-        await this.sendAttendanceEmail(item);
-        this.attendanceQueue.shift();
-        console.log(`[EmailService] Attendance email sent successfully to ${item.to}. Remaining: ${this.attendanceQueue.length}`);
+        try {
+            await this.sendAttendanceEmail(item);
+            this.attendanceQueue.shift();
+            console.log(`[EmailService] Attendance email sent successfully to ${item.to}. Remaining: ${this.attendanceQueue.length}`);
 
-        if (this.attendanceQueue.length > 0) {
-          await this.delay(this.EMAIL_DELAY);
+            if (this.attendanceQueue.length > 0) {
+            await this.delay(this.EMAIL_DELAY);
+            }
+        } catch (error) {
+            console.error(`[EmailService] Failed to send attendance email to ${item.to}:`, error);
+
+            item.retries++;
+            if (item.retries >= this.MAX_RETRIES) {
+            console.error(`[EmailService] Max retries reached for ${item.to}. Removing from queue.`);
+            this.attendanceQueue.shift();
+            } else {
+            this.attendanceQueue.shift();
+            this.attendanceQueue.push(item);
+            console.log(`[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`);
+            await this.delay(this.RETRY_DELAY);
+            }
         }
-      } catch (error) {
-        console.error(`[EmailService] Failed to send attendance email to ${item.to}:`, error);
-
-        item.retries++;
-        if (item.retries >= this.MAX_RETRIES) {
-          console.error(`[EmailService] Max retries reached for ${item.to}. Removing from queue.`);
-          this.attendanceQueue.shift();
-        } else {
-          this.attendanceQueue.shift();
-          this.attendanceQueue.push(item);
-          console.log(`[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`);
-          await this.delay(this.RETRY_DELAY);
         }
-      }
+    } finally {
+        this.isProcessingAttendance = false;
+        console.log('[EmailService] Attendance queue processing completed.');
     }
-
-    this.isProcessingAttendance = false;
-    console.log('[EmailService] Attendance queue processing completed.');
   }
 
   private static async sendAttendanceEmail(item: AttendanceEmailQueueItem): Promise<void> {

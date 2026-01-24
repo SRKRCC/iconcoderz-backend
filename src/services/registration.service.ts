@@ -48,21 +48,26 @@ export class RegistrationService {
 
     const qrCode = await QRService.generate(user.registrationCode, user.id);
 
-    EmailService.sendConfirmation(
-      user.email,
-      user.fullName,
-      registrationCode,
-      qrCode,
-      {
-        phone: user.phone,
-        registrationNumber: user.registrationNumber,
-        branch: user.branch,
-        yearOfStudy: user.yearOfStudy,
-        codechefHandle: user.codechefHandle,
-        leetcodeHandle: user.leetcodeHandle,
-        codeforcesHandle: user.codeforcesHandle,
-      }
-    ).catch(err => console.error('Failed to queue confirmation email', err));
+    try {
+      await EmailService.sendConfirmation(
+        user.email,
+        user.fullName,
+        registrationCode,
+        qrCode,
+        {
+          phone: user.phone,
+          registrationNumber: user.registrationNumber,
+          branch: user.branch,
+          yearOfStudy: user.yearOfStudy,
+          codechefHandle: user.codechefHandle,
+          leetcodeHandle: user.leetcodeHandle,
+          codeforcesHandle: user.codeforcesHandle,
+        }
+      );
+    } catch (err) {
+      console.error('Failed to send confirmation email', err);
+      // We don't throw here to avoid failing the registration after user is created
+    }
 
     return user;
   }
