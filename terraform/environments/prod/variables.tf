@@ -49,7 +49,7 @@ variable "jwt_secret" {
 }
 
 variable "base_url_client" {
-  type = string
+  type = list(string)
 }
 
 variable "qr_secret_key" {

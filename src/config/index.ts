@@ -37,6 +37,7 @@ export const config = {
       ? [
           'https://iconcoderz.srkrcodingclub.in',
           'https://www.iconcoderz.srkrcodingclub.in',
+          'https://iconcoderz.pages.dev',
           env.BASE_URL_CLIENT,
         ]
       : [env.BASE_URL_CLIENT, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
@@ -95,12 +96,16 @@ export async function initConfig() {
 
     const clientSecrets = await getSecret('iconcoderz/prod/client-config');
     if (clientSecrets && clientSecrets.base_url) {
-      config.clientUrl = clientSecrets.base_url;
+      const dbBaseUrl = clientSecrets.base_url;
+      config.clientUrl = Array.isArray(dbBaseUrl) ? dbBaseUrl[0] : dbBaseUrl;
+      
       // Update CORS origins with production client URL
+      const origins = Array.isArray(dbBaseUrl) ? dbBaseUrl : [dbBaseUrl];
       config.cors.origin = [
-        clientSecrets.base_url,
+        ...origins,
         'https://www.iconcoderz.srkrcodingclub.in',
         'https://iconcoderz.srkrcodingclub.in',
+        'https://iconcoderz.pages.dev',
       ];
     }
 
