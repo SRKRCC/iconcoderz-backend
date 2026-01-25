@@ -7,24 +7,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy to Production
+  version:
+    name: Get Version
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
+    outputs:
+      version: ${{ steps.package-version.outputs.version }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
+      - name: Get Version from package.json
+        id: package-version
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+  test:
+    name: Run Tests
+    needs: [version]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
         with:
           version: 10
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: "pnpm"
@@ -35,11 +44,25 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm run prisma:generate
 
+      - name: Run Tests
+        run: pnpm test run
+
       - name: Build Application
         run: pnpm run build
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+  infrastructure:
+    name: Provision Infrastructure
+    needs: [version]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      ecr_url: ${{ steps.ecr.outputs.url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
         run: terraform init -reconfigure
@@ -72,45 +95,113 @@ jobs:
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_base_url_client: ${{ secrets.BASE_URL_CLIENT }}
           TF_VAR_qr_secret_key: ${{ secrets.QR_SECRET_KEY }}
-          TF_VAR_image_tag: ${{ github.sha }}
+          TF_VAR_image_tag: ${{ needs.version.outputs.version }}
 
       - name: Get ECR Repository URL
         id: ecr
         run: |
           ECR_URL=$(terraform output -raw ecr_repository_url)
           echo "url=$ECR_URL" >> $GITHUB_OUTPUT
+          echo "ECR URL: $ECR_URL"
         working-directory: ./terraform/environments/prod
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ap-south-1
 
+  build-and-push:
+    name: Build & Push Docker Image
+    needs: [version, test, infrastructure]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ steps.ecr.outputs.url }}
+          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ needs.infrastructure.outputs.ecr_url }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ap-south-1
 
-      - name: Get Version from package.json
-        id: package-version
-        run: |
-          VERSION=$(jq -r .version package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and Push Docker Image
-        run: |
-          docker build -t ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }} .
-          docker tag ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }} ${{ steps.ecr.outputs.url }}:latest
-          docker push ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }}
-          docker push ${{ steps.ecr.outputs.url }}:latest
-        env:
-          DOCKER_BUILDKIT: 1
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ needs.infrastructure.outputs.ecr_url }}:${{ needs.version.outputs.version }}
+            ${{ needs.infrastructure.outputs.ecr_url }}:latest
+          cache-from: type=registry,ref=${{ needs.infrastructure.outputs.ecr_url }}:buildcache
+          cache-to: type=registry,ref=${{ needs.infrastructure.outputs.ecr_url }}:buildcache,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
-      - name: Terraform Apply - Create Lambda and API Gateway
+      - name: Image Info
         run: |
-          terraform apply -auto-approve
+          echo "   Image built and pushed:"
+          echo "   Version: ${{ needs.version.outputs.version }}"
+          echo "   Tag: ${{ needs.infrastructure.outputs.ecr_url }}:${{ needs.version.outputs.version }}"
+
+  migrate:
+    name: Run Database Migrations
+    needs: [version, build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm run prisma:generate
+
+      - name: Run Migrations
+        run: pnpm run migrate:deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Migration Success
+        run: echo " Database migrations completed"
+
+  deploy:
+    name: Deploy to Production (Lambda)
+    needs: [version, infrastructure, build-and-push, migrate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init -reconfigure
+        working-directory: ./terraform/environments/prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+
+      - name: Terraform Apply - Deploy Lambda
+        id: terraform-apply
+        run: terraform apply -auto-approve
         working-directory: ./terraform/environments/prod
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -129,4 +220,95 @@ jobs:
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_base_url_client: ${{ secrets.BASE_URL_CLIENT }}
           TF_VAR_qr_secret_key: ${{ secrets.QR_SECRET_KEY }}
-          TF_VAR_image_tag: ${{ steps.package-version.outputs.version }}
+          TF_VAR_image_tag: ${{ needs.version.outputs.version }}
+
+      - name: Wait for Lambda to be ready
+        run: |
+          echo " Waiting for Lambda function to update..."
+          aws lambda wait function-updated --function-name iconcoderz-prod-api
+          echo " Lambda function updated"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+
+      - name: Health Check
+        id: health-check
+        run: |
+          FUNCTION_URL=$(terraform output -raw base_url)
+          echo " Checking health at $FUNCTION_URL/api/v1/health"
+
+          # Give it a moment to propagate
+          sleep 10
+
+          # Retry logic for health check
+          for i in {1..5}; do
+            if curl -f -s "$FUNCTION_URL/api/v1/health"; then
+              echo " Health check passed"
+              exit 0
+            fi
+            echo "  Health check attempt $i failed, retrying..."
+            sleep 5
+          done
+
+          echo " Health check failed after 5 attempts"
+          exit 1
+        working-directory: ./terraform/environments/prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+
+  tag-release:
+    name: Tag Release
+    needs: [version, deploy]
+    runs-on: ubuntu-latest
+    if: success()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and Push Git Tag
+        run: |
+          TAG_NAME="v${{ needs.version.outputs.version }}"
+
+          # Check if tag already exists
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "  Tag $TAG_NAME already exists"
+            echo "   Skipping tag creation"
+            exit 0
+          fi
+
+          # Create and push tag
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          git push origin "$TAG_NAME"
+          echo " Created and pushed tag $TAG_NAME"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          release_name: Release v${{ needs.version.outputs.version }}
+          body: |
+            ## Release v${{ needs.version.outputs.version }}
+
+            ### Deployment Info
+            - **Environment**: Production
+            - **Lambda Function**: iconcoderz-prod-api
+            - **Docker Image**: ${{ needs.version.outputs.version }}
+            - **Deployed**: ${{ github.event.head_commit.timestamp }}
+
+            ### Changes
+            ${{ github.event.head_commit.message }}
+          draft: false
+          prerelease: false
