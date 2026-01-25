@@ -17,3 +17,5 @@ docs
 *.tfstate
 *.tfstate.backup
 *.zip
+
+.vscode
