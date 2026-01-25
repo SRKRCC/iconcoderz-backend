@@ -1,7 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
+import redoc from 'redoc-express';
 import { config } from './config/index.js';
+import { swaggerSpec } from './config/swagger.js';
 import { registrationRoutes } from './routes/registration.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
 import attendanceRoutes from './routes/attendance.routes.js';
@@ -16,9 +19,11 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com', 'https://cdn.jsdelivr.net'],
         imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        workerSrc: ["'self'", 'blob:'],
       },
     },
   })
@@ -37,6 +42,18 @@ app.use(
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.get('/redoc', (redoc as any)({
+  title: 'API Docs',
+  specUrl: '/api-docs.json'
+}));
+
+app.get('/api-docs.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
