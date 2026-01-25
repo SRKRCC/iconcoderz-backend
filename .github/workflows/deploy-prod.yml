@@ -223,7 +223,7 @@ jobs:
       - name: Health Check
         id: health-check
         run: |
-          FUNCTION_URL=$(terraform output -raw base_url)
+          FUNCTION_URL=$(terraform output -raw api_url)
           echo " Checking health at $FUNCTION_URL/api/v1/health"
 
           # Give it a moment to propagate
