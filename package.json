@@ -1,40 +1,5 @@
 {
-  "name": "iconcoderz",
-  "version": "v1.0.3",
-  "description": "IconCoderz Backend",
-  "type": "module",
-  "main": "dist/index.js",
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "seed:admin": "tsx scripts/seed-admin.ts",
-    "test:email": "tsx scripts/test-email.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
   "author": "SRKR Coding Club",
-  "license": "ISC",
-  "packageManager": "pnpm@10.28.0",
-  "devDependencies": {
-    "@types/aws-lambda": "^8.10.160",
-    "@types/bcryptjs": "^3.0.0",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/morgan": "^1.9.10",
-    "@types/node": "^25.0.9",
-    "@types/nodemailer": "^7.0.5",
-    "@types/qrcode": "^1.5.6",
-    "@types/swagger-jsdoc": "^6.0.4",
-    "@types/swagger-ui-express": "^4.1.8",
-    "prisma": "^7.3.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
-  },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.972.0",
     "@prisma/adapter-neon": "^7.3.0",
@@ -55,5 +20,41 @@
     "uuid": "^13.0.0",
     "winston": "^3.19.0",
     "zod": "^4.3.5"
-  }
+  },
+  "description": "IconCoderz Backend",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.160",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^25.0.9",
+    "@types/nodemailer": "^7.0.5",
+    "@types/qrcode": "^1.5.6",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "prisma": "^7.3.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "main": "dist/index.js",
+  "name": "iconcoderz",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "build": "pnpm run swagger:generate && tsc",
+    "dev": "tsx watch src/index.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "seed:admin": "tsx scripts/seed-admin.ts",
+    "start": "node dist/index.js",
+    "swagger:generate": "tsx src/utils/generate-swagger.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:email": "tsx scripts/test-email.ts"
+  },
+  "type": "module",
+  "version": "v1.0.4"
 }

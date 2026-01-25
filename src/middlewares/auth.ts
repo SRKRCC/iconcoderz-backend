@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { AdminService } from '../services/admin.service.js';
-import { sendError } from '../utils/response.js';
+import { Request, Response, NextFunction } from "express";
+import { AdminService } from "../services/admin.service.js";
+import { sendError } from "../utils/response.js";
 
 declare global {
   namespace Express {
@@ -17,13 +17,13 @@ declare global {
 export const authenticateAdmin = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      sendError(res, 401, 'Authentication required');
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      sendError(res, 401, "Authentication required");
       return;
     }
 
@@ -34,7 +34,7 @@ export const authenticateAdmin = async (
       req.admin = decoded;
       next();
     } catch (error) {
-      sendError(res, 401, 'Invalid or expired token');
+      sendError(res, 401, "Invalid or expired token");
     }
   } catch (error) {
     next(error);

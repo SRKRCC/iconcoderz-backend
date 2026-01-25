@@ -1,6 +1,6 @@
-import crypto from 'crypto';
-import { v2 as cloudinary } from 'cloudinary';
-import { config } from '../config/index.js';
+import crypto from "crypto";
+import { v2 as cloudinary } from "cloudinary";
+import { config } from "../config/index.js";
 
 cloudinary.config({
   cloud_name: config.services.cloudinary.cloudName,
@@ -9,29 +9,29 @@ cloudinary.config({
 });
 
 export class CloudinaryService {
-  static generateSignature(folder: string = 'iconcoderz-payments') {
+  static generateSignature(folder: string = "iconcoderz-payments") {
     const timestamp = Math.round(new Date().getTime() / 1000);
     const paramsToSign = {
       folder,
       timestamp,
     };
-    
+
     const sortedParams = Object.entries(paramsToSign)
       .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
       .map(([key, value]) => `${key}=${value}`)
-      .join('&');
-    
+      .join("&");
+
     const stringToSign = `${sortedParams}${config.services.cloudinary.apiSecret}`;
     const signature = crypto
-      .createHash('sha1')
+      .createHash("sha1")
       .update(stringToSign)
-      .digest('hex');
-    
-    return { 
-        timestamp, 
-        signature, 
-        apiKey: config.services.cloudinary.apiKey,
-        cloudName: config.services.cloudinary.cloudName 
+      .digest("hex");
+
+    return {
+      timestamp,
+      signature,
+      apiKey: config.services.cloudinary.apiKey,
+      cloudName: config.services.cloudinary.cloudName,
     };
   }
 }

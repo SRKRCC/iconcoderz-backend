@@ -11,20 +11,24 @@ Modern Node.js + TypeScript + PostgreSQL + Prisma v7 backend.
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 pnpm install
 ```
 
 2. Configure environment variables:
+
 - Copy `.env.example` to `.env`
 - Update `DATABASE_URL` with your PostgreSQL connection string
 
 3. Generate Prisma Client:
+
 ```bash
 pnpm prisma:generate
 ```
 
 4. Run migrations:
+
 ```bash
 pnpm prisma:migrate
 ```

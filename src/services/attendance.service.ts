@@ -1,7 +1,7 @@
-import { prisma } from '../utils/prisma.js';
-import { QRService } from './qr.service.js';
-import { ManualCheckInInput } from '../dtos/attendance.dto.js';
-import { cache, CacheKeys, CacheTTL } from '../utils/cache.js';
+import { prisma } from "../utils/prisma.js";
+import { QRService } from "./qr.service.js";
+import { ManualCheckInInput } from "../dtos/attendance.dto.js";
+import { cache, CacheKeys, CacheTTL } from "../utils/cache.js";
 
 interface QRPayload {
   registrationCode: string;
@@ -12,23 +12,30 @@ interface QRPayload {
 }
 
 export class AttendanceService {
-  static async scanQR(qrData: string, adminId: string, ipAddress?: string, deviceInfo?: string) {
+  static async scanQR(
+    qrData: string,
+    adminId: string,
+    ipAddress?: string,
+    deviceInfo?: string,
+  ) {
     let payload: QRPayload;
 
     try {
       payload = JSON.parse(qrData);
     } catch {
-      throw new Error('Invalid QR code format');
+      throw new Error("Invalid QR code format");
     }
 
     // Verify QR signature
     if (!QRService.verifyHash(payload)) {
-      throw new Error('QR code verification failed. This QR may be tampered or fake.');
+      throw new Error(
+        "QR code verification failed. This QR may be tampered or fake.",
+      );
     }
 
     // Verify event ID
-    if (payload.eventId !== 'iconcoderz-2k26') {
-      throw new Error('This QR code is not for IconCoderz-2K26 event');
+    if (payload.eventId !== "iconcoderz-2k26") {
+      throw new Error("This QR code is not for IconCoderz-2K26 event");
     }
 
     // Find user
@@ -40,12 +47,12 @@ export class AttendanceService {
     });
 
     if (!user) {
-      throw new Error('Registration not found. Invalid QR code.');
+      throw new Error("Registration not found. Invalid QR code.");
     }
 
     // Check payment status
-    if (user.paymentStatus !== 'VERIFIED') {
-      throw new Error('Payment not verified. Please contact admin.');
+    if (user.paymentStatus !== "VERIFIED") {
+      throw new Error("Payment not verified. Please contact admin.");
     }
 
     // Check if already attended
@@ -53,7 +60,7 @@ export class AttendanceService {
       return {
         success: false,
         alreadyAttended: true,
-        message: 'Already checked in',
+        message: "Already checked in",
         user: {
           fullName: user.fullName,
           registrationCode: user.registrationCode,
@@ -87,7 +94,7 @@ export class AttendanceService {
     return {
       success: true,
       alreadyAttended: false,
-      message: 'Check-in successful',
+      message: "Check-in successful",
       user: {
         id: updatedUser.id,
         fullName: updatedUser.fullName,
@@ -105,7 +112,9 @@ export class AttendanceService {
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          data.registrationCode ? { registrationCode: data.registrationCode } : undefined,
+          data.registrationCode
+            ? { registrationCode: data.registrationCode }
+            : undefined,
           data.email ? { email: data.email } : undefined,
           data.phone ? { phone: data.phone } : undefined,
         ].filter(Boolean) as any,
@@ -113,18 +122,18 @@ export class AttendanceService {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
-    if (user.paymentStatus !== 'VERIFIED') {
-      throw new Error('Payment not verified');
+    if (user.paymentStatus !== "VERIFIED") {
+      throw new Error("Payment not verified");
     }
 
     if (user.attended) {
       return {
         success: false,
         alreadyAttended: true,
-        message: 'Already checked in',
+        message: "Already checked in",
         user: {
           fullName: user.fullName,
           registrationCode: user.registrationCode,
@@ -153,7 +162,7 @@ export class AttendanceService {
     return {
       success: true,
       alreadyAttended: false,
-      message: 'Manual check-in successful',
+      message: "Manual check-in successful",
       user: {
         id: updatedUser.id,
         fullName: updatedUser.fullName,
@@ -175,11 +184,12 @@ export class AttendanceService {
         const [total, attended, verified] = await Promise.all([
           prisma.user.count(),
           prisma.user.count({ where: { attended: true } }),
-          prisma.user.count({ where: { paymentStatus: 'VERIFIED' } }),
+          prisma.user.count({ where: { paymentStatus: "VERIFIED" } }),
         ]);
 
         const pending = verified - attended;
-        const attendanceRate = verified > 0 ? Math.round((attended / verified) * 100) : 0;
+        const attendanceRate =
+          verified > 0 ? Math.round((attended / verified) * 100) : 0;
 
         return {
           total,
@@ -188,14 +198,14 @@ export class AttendanceService {
           pending,
           attendanceRate,
         };
-      }
+      },
     );
   }
 
   static async getRecentScans(limit: number = 10) {
     const logs = await prisma.attendanceLog.findMany({
       take: limit,
-      orderBy: { scannedAt: 'desc' },
+      orderBy: { scannedAt: "desc" },
       include: {
         user: {
           select: {
@@ -221,25 +231,32 @@ export class AttendanceService {
     page: number;
     limit: number;
     search?: string;
-    attended?: 'true' | 'false' | 'all';
-    sortBy?: 'createdAt' | 'attendedAt' | 'fullName';
-    sortOrder?: 'asc' | 'desc';
+    attended?: "true" | "false" | "all";
+    sortBy?: "createdAt" | "attendedAt" | "fullName";
+    sortOrder?: "asc" | "desc";
   }) {
-    const { page, limit, search, attended, sortBy = 'createdAt', sortOrder = 'desc' } = params;
+    const {
+      page,
+      limit,
+      search,
+      attended,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = params;
     const skip = (page - 1) * limit;
 
-    const where: any = { paymentStatus: 'VERIFIED' };
+    const where: any = { paymentStatus: "VERIFIED" };
 
-    if (attended !== 'all') {
-      where.attended = attended === 'true';
+    if (attended !== "all") {
+      where.attended = attended === "true";
     }
 
     if (search) {
       where.OR = [
-        { fullName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { fullName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
         { phone: { contains: search } },
-        { registrationCode: { contains: search, mode: 'insensitive' } },
+        { registrationCode: { contains: search, mode: "insensitive" } },
       ];
     }
 

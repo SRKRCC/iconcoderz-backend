@@ -1,13 +1,22 @@
-import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from "@aws-sdk/client-secrets-manager";
 import { config } from "./index.js";
 
 const region = "ap-south-1";
 const client = new SecretsManagerClient({ region });
 
 export async function getSecret(secretId: string): Promise<any> {
-  if (config.env === 'development' && !process.env.AWS_ACCESS_KEY_ID && !process.env.AWS_PROFILE) {
-    console.warn(`[Secrets] Missing AWS credentials in dev. Returning null for ${secretId}`);
-    return null; 
+  if (
+    config.env === "development" &&
+    !process.env.AWS_ACCESS_KEY_ID &&
+    !process.env.AWS_PROFILE
+  ) {
+    console.warn(
+      `[Secrets] Missing AWS credentials in dev. Returning null for ${secretId}`,
+    );
+    return null;
   }
 
   try {
@@ -23,9 +32,11 @@ export async function getSecret(secretId: string): Promise<any> {
     }
     return null;
   } catch (error) {
-    if (config.env === 'development') {
-        console.warn(`[Secrets] Failed to fetch ${secretId}: ${(error as Error).message}`);
-        return null;
+    if (config.env === "development") {
+      console.warn(
+        `[Secrets] Failed to fetch ${secretId}: ${(error as Error).message}`,
+      );
+      return null;
     }
     console.error(`[Secrets] Error fetching ${secretId}:`, error);
     throw error;

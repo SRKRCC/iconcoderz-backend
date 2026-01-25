@@ -14,26 +14,25 @@ class InMemoryCache {
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    
+
     if (Date.now() > entry.expiresAt) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry.value as T;
   }
 
   set<T>(key: string, value: T, ttlSeconds: number): void {
     this.cache.set(key, {
       value,
-      expiresAt: Date.now() + (ttlSeconds * 1000),
+      expiresAt: Date.now() + ttlSeconds * 1000,
     });
   }
 
   delete(key: string): void {
     this.cache.delete(key);
   }
-
 
   invalidatePattern(pattern: string): void {
     const regex = new RegExp(pattern);
@@ -43,7 +42,6 @@ class InMemoryCache {
       }
     }
   }
-
 
   clear(): void {
     this.cache.clear();
@@ -58,11 +56,10 @@ class InMemoryCache {
     }
   }
 
-
   async getOrCompute<T>(
     key: string,
     ttlSeconds: number,
-    compute: () => Promise<T>
+    compute: () => Promise<T>,
   ): Promise<T> {
     const cached = this.get<T>(key);
     if (cached !== null) {
@@ -85,8 +82,8 @@ class InMemoryCache {
 export const cache = new InMemoryCache();
 
 export const CacheKeys = {
-  DASHBOARD_STATS: 'dashboard:stats',
-  ATTENDANCE_STATS: 'attendance:stats',
+  DASHBOARD_STATS: "dashboard:stats",
+  ATTENDANCE_STATS: "attendance:stats",
 };
 
 export const CacheTTL = {

@@ -1,6 +1,6 @@
-import { Response } from 'express';
+import { Response } from "express";
 
-type ResponseStatus = 'success' | 'error';
+type ResponseStatus = "success" | "error";
 
 interface ApiResponse<T = any> {
   status: ResponseStatus;
@@ -9,18 +9,28 @@ interface ApiResponse<T = any> {
   error?: any;
 }
 
-export const sendResponse = <T>(res: Response, statusCode: number, message: string, data?: T) => {
+export const sendResponse = <T>(
+  res: Response,
+  statusCode: number,
+  message: string,
+  data?: T,
+) => {
   const response: ApiResponse<T> = {
-    status: statusCode >= 200 && statusCode < 300 ? 'success' : 'error',
+    status: statusCode >= 200 && statusCode < 300 ? "success" : "error",
     message,
     data,
   };
   return res.status(statusCode).json(response);
 };
 
-export const sendError = (res: Response, statusCode: number, message: string, error?: any) => {
+export const sendError = (
+  res: Response,
+  statusCode: number,
+  message: string,
+  error?: any,
+) => {
   const response: ApiResponse = {
-    status: 'error',
+    status: "error",
     message,
     error,
   };

@@ -1,8 +1,8 @@
-import { prisma } from '../utils/prisma.js';
-import { UserInput } from '../dtos/user.dto.js';
-import { v4 as uuidv4 } from 'uuid';
-import { QRService } from './qr.service.js';
-import { EmailService } from './email.service.js';
+import { prisma } from "../utils/prisma.js";
+import { UserInput } from "../dtos/user.dto.js";
+import { v4 as uuidv4 } from "uuid";
+import { QRService } from "./qr.service.js";
+import { EmailService } from "./email.service.js";
 
 export class RegistrationService {
   static async register(data: UserInput) {
@@ -18,13 +18,17 @@ export class RegistrationService {
     });
 
     if (existing) {
-      if (existing.email === data.email) throw new Error('Email already registered');
-      if (existing.registrationNumber === data.registrationNumber) throw new Error('Registration number already registered');
-      if (existing.phone === data.phone) throw new Error('Phone number already registered');
-      if (existing.transactionId === data.transactionId) throw new Error('Transaction ID already used');
+      if (existing.email === data.email)
+        throw new Error("Email already registered");
+      if (existing.registrationNumber === data.registrationNumber)
+        throw new Error("Registration number already registered");
+      if (existing.phone === data.phone)
+        throw new Error("Phone number already registered");
+      if (existing.transactionId === data.transactionId)
+        throw new Error("Transaction ID already used");
     }
 
-    const uniqueSuffix = uuidv4().split('-')[0].toUpperCase();
+    const uniqueSuffix = uuidv4().split("-")[0].toUpperCase();
     const registrationCode = `IC2K26-${uniqueSuffix}`;
 
     const user = await prisma.user.create({
@@ -42,7 +46,7 @@ export class RegistrationService {
         codeforcesHandle: data.codeforcesHandle,
         transactionId: data.transactionId,
         screenshotUrl: data.screenshotUrl,
-        paymentStatus: 'PENDING',
+        paymentStatus: "PENDING",
       },
     });
 
@@ -62,10 +66,10 @@ export class RegistrationService {
           codechefHandle: user.codechefHandle,
           leetcodeHandle: user.leetcodeHandle,
           codeforcesHandle: user.codeforcesHandle,
-        }
+        },
       );
     } catch (err) {
-      console.error('Failed to send confirmation email', err);
+      console.error("Failed to send confirmation email", err);
       // We don't throw here to avoid failing the registration after user is created
     }
 

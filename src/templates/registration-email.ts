@@ -11,23 +11,28 @@ interface UserData {
   codeforcesHandle?: string | null;
 }
 
-const EVENT_WHATSAPP_GROUP = 'https://chat.whatsapp.com/DD6dVojz3DJ3TrkNWuIHZX';
-const EVENT_DATE = '23rd February 2026';
-const EVENT_TIME = '1:30 PM IST';
+const EVENT_WHATSAPP_GROUP = "https://chat.whatsapp.com/DD6dVojz3DJ3TrkNWuIHZX";
+const EVENT_DATE = "23rd February 2026";
+const EVENT_TIME = "1:30 PM IST";
 
 export const generateRegistrationEmailHTML = (user: UserData): string => {
   const yearMap: Record<string, string> = {
-    FIRST_YEAR: '1st Year',
-    SECOND_YEAR: '2nd Year',
-    THIRD_YEAR: '3rd Year',
-    FOURTH_YEAR: '4th Year',
+    FIRST_YEAR: "1st Year",
+    SECOND_YEAR: "2nd Year",
+    THIRD_YEAR: "3rd Year",
+    FOURTH_YEAR: "4th Year",
   };
 
   const cpHandles = [
-    user.codechefHandle && `<li><strong>CodeChef:</strong> ${user.codechefHandle}</li>`,
-    user.leetcodeHandle && `<li><strong>LeetCode:</strong> ${user.leetcodeHandle}</li>`,
-    user.codeforcesHandle && `<li><strong>Codeforces:</strong> ${user.codeforcesHandle}</li>`,
-  ].filter(Boolean).join('');
+    user.codechefHandle &&
+      `<li><strong>CodeChef:</strong> ${user.codechefHandle}</li>`,
+    user.leetcodeHandle &&
+      `<li><strong>LeetCode:</strong> ${user.leetcodeHandle}</li>`,
+    user.codeforcesHandle &&
+      `<li><strong>Codeforces:</strong> ${user.codeforcesHandle}</li>`,
+  ]
+    .filter(Boolean)
+    .join("");
 
   return `
     <!DOCTYPE html>
@@ -85,14 +90,18 @@ export const generateRegistrationEmailHTML = (user: UserData): string => {
           </tr>
         </table>
         
-        ${cpHandles ? `
+        ${
+          cpHandles
+            ? `
         <div style="margin-top: 20px; padding: 15px; background: #f0f4ff; border-radius: 8px;">
           <h3 style="margin: 0 0 10px 0; color: #667eea; font-size: 16px;">CP Handles</h3>
           <ul style="margin: 0; padding-left: 20px; color: #555;">
             ${cpHandles}
           </ul>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
       </div>
 
       <!-- Event Details -->

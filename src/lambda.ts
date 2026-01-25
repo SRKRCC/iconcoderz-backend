@@ -1,7 +1,7 @@
-import configureServerlessExpress from '@vendia/serverless-express';
-import { app } from './app.js';
-import { initConfig } from './config/index.js';
-import { initPrisma } from './utils/prisma.js';
+import configureServerlessExpress from "@vendia/serverless-express";
+import { app } from "./app.js";
+import { initConfig } from "./config/index.js";
+import { initPrisma } from "./utils/prisma.js";
 
 const setup = async () => {
   await initConfig();

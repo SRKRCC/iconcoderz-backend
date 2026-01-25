@@ -1,9 +1,9 @@
-import { prisma } from '../utils/prisma.js';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { AdminLoginInput } from '../dtos/admin.dto.js';
-import { config } from '../config/index.js';
-import { cache, CacheKeys, CacheTTL } from '../utils/cache.js';
+import { prisma } from "../utils/prisma.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { AdminLoginInput } from "../dtos/admin.dto.js";
+import { config } from "../config/index.js";
+import { cache, CacheKeys, CacheTTL } from "../utils/cache.js";
 
 export class AdminService {
   static async login(data: AdminLoginInput) {
@@ -12,24 +12,24 @@ export class AdminService {
     });
 
     if (!admin) {
-      throw new Error('Invalid credentials');
+      throw new Error("Invalid credentials");
     }
 
     const isValidPassword = await bcrypt.compare(data.password, admin.password);
 
     if (!isValidPassword) {
-      throw new Error('Invalid credentials');
+      throw new Error("Invalid credentials");
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        id: admin.id, 
+      {
+        id: admin.id,
         email: admin.email,
-        role: 'admin' 
+        role: "admin",
       },
       config.jwt.secret,
-      { expiresIn: '7d' }
+      { expiresIn: "7d" },
     );
 
     return {
@@ -47,7 +47,7 @@ export class AdminService {
       const decoded = jwt.verify(token, config.jwt.secret) as any;
       return decoded;
     } catch (error) {
-      throw new Error('Invalid or expired token');
+      throw new Error("Invalid or expired token");
     }
   }
 
@@ -58,13 +58,15 @@ export class AdminService {
     search?: string;
   }) {
     if (filters?.search && filters.search.trim()) {
-      const searchTerms = filters.search.trim().split(/\s+/).join(' & ');
-      
+      const searchTerms = filters.search.trim().split(/\s+/).join(" & ");
+
       const conditions: string[] = [];
       const params: any[] = [];
       let paramIndex = 1;
 
-      conditions.push(`"searchVector" @@ to_tsquery('english', $${paramIndex})`);
+      conditions.push(
+        `"searchVector" @@ to_tsquery('english', $${paramIndex})`,
+      );
       params.push(searchTerms);
       paramIndex++;
 
@@ -84,7 +86,8 @@ export class AdminService {
         paramIndex++;
       }
 
-      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const whereClause =
+        conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
       // Exclude searchVector from SELECT to avoid deserialization error
       const users = await prisma.$queryRawUnsafe<any[]>(
@@ -93,7 +96,7 @@ export class AdminService {
                 "transactionId", "screenshotUrl", "paymentStatus", attended, "attendedAt", 
                 "attendedBy", "checkInCount", "createdAt", "updatedAt"
          FROM "User" ${whereClause} ORDER BY "createdAt" DESC`,
-        ...params
+        ...params,
       );
 
       return users;
@@ -115,7 +118,7 @@ export class AdminService {
 
     const users = await prisma.user.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return users;
@@ -127,7 +130,7 @@ export class AdminService {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     return user;
@@ -135,7 +138,7 @@ export class AdminService {
 
   static async updatePaymentStatus(
     userId: string,
-    status: 'PENDING' | 'VERIFIED' | 'REJECTED'
+    status: "PENDING" | "VERIFIED" | "REJECTED",
   ) {
     const user = await prisma.user.update({
       where: { id: userId },
@@ -160,20 +163,20 @@ export class AdminService {
           recentRegistrations,
         ] = await Promise.all([
           prisma.user.count(),
-          prisma.user.count({ where: { paymentStatus: 'VERIFIED' } }),
-          prisma.user.count({ where: { paymentStatus: 'PENDING' } }),
-          prisma.user.count({ where: { paymentStatus: 'REJECTED' } }),
+          prisma.user.count({ where: { paymentStatus: "VERIFIED" } }),
+          prisma.user.count({ where: { paymentStatus: "PENDING" } }),
+          prisma.user.count({ where: { paymentStatus: "REJECTED" } }),
           prisma.user.groupBy({
-            by: ['branch'],
+            by: ["branch"],
             _count: { branch: true },
           }),
           prisma.user.groupBy({
-            by: ['yearOfStudy'],
+            by: ["yearOfStudy"],
             _count: { yearOfStudy: true },
           }),
           prisma.user.findMany({
             take: 10,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
             select: {
               id: true,
               registrationCode: true,
@@ -191,17 +194,23 @@ export class AdminService {
           verifiedPayments,
           pendingPayments,
           rejectedPayments,
-          branchDistribution: branchDistribution.reduce((acc, item) => {
-            acc[item.branch] = item._count.branch;
-            return acc;
-          }, {} as Record<string, number>),
-          yearDistribution: yearDistribution.reduce((acc, item) => {
-            acc[item.yearOfStudy] = item._count.yearOfStudy;
-            return acc;
-          }, {} as Record<string, number>),
+          branchDistribution: branchDistribution.reduce(
+            (acc, item) => {
+              acc[item.branch] = item._count.branch;
+              return acc;
+            },
+            {} as Record<string, number>,
+          ),
+          yearDistribution: yearDistribution.reduce(
+            (acc, item) => {
+              acc[item.yearOfStudy] = item._count.yearOfStudy;
+              return acc;
+            },
+            {} as Record<string, number>,
+          ),
           recentRegistrations,
         };
-      }
+      },
     );
   }
 }

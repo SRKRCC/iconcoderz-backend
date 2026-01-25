@@ -15,118 +15,118 @@ jobs:
       contents: read
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 10
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 22
-        cache: 'pnpm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
 
-    - name: Install Dependencies
-      run: pnpm install --frozen-lockfile
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
 
-    - name: Generate Prisma Client
-      run: pnpm run prisma:generate
+      - name: Generate Prisma Client
+        run: pnpm run prisma:generate
 
-    - name: Build Application
-      run: pnpm run build
+      - name: Build Application
+        run: pnpm run build
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-    - name: Terraform Init
-      run: terraform init -reconfigure
-      working-directory: ./terraform/environments/prod
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ap-south-1
+      - name: Terraform Init
+        run: terraform init -reconfigure
+        working-directory: ./terraform/environments/prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
 
-    - name: Terraform Apply - Create ECR
-      run: |
-        terraform apply -auto-approve \
-          -target=module.lambda_api.aws_ecr_repository.lambda \
-          -target=module.lambda_api.aws_ecr_lifecycle_policy.lambda
-      working-directory: ./terraform/environments/prod
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ap-south-1
-        TF_VAR_project: iconcoderz
-        TF_VAR_environment: prod
-        TF_VAR_aws_region: ap-south-1
-        TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
-        TF_VAR_smtp_host: ${{ secrets.SMTP_HOST }}
-        TF_VAR_smtp_user: ${{ secrets.SMTP_USER }}
-        TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
-        TF_VAR_cloudinary_cloud_name: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
-        TF_VAR_cloudinary_api_key: ${{ secrets.CLOUDINARY_API_KEY }}
-        TF_VAR_cloudinary_api_secret: ${{ secrets.CLOUDINARY_API_SECRET }}
-        TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-        TF_VAR_base_url_client: ${{ secrets.BASE_URL_CLIENT }}
-        TF_VAR_qr_secret_key: ${{ secrets.QR_SECRET_KEY }}
-        TF_VAR_image_tag: ${{ github.sha }}
+      - name: Terraform Apply - Create ECR
+        run: |
+          terraform apply -auto-approve \
+            -target=module.lambda_api.aws_ecr_repository.lambda \
+            -target=module.lambda_api.aws_ecr_lifecycle_policy.lambda
+        working-directory: ./terraform/environments/prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+          TF_VAR_project: iconcoderz
+          TF_VAR_environment: prod
+          TF_VAR_aws_region: ap-south-1
+          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+          TF_VAR_smtp_host: ${{ secrets.SMTP_HOST }}
+          TF_VAR_smtp_user: ${{ secrets.SMTP_USER }}
+          TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
+          TF_VAR_cloudinary_cloud_name: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          TF_VAR_cloudinary_api_key: ${{ secrets.CLOUDINARY_API_KEY }}
+          TF_VAR_cloudinary_api_secret: ${{ secrets.CLOUDINARY_API_SECRET }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+          TF_VAR_base_url_client: ${{ secrets.BASE_URL_CLIENT }}
+          TF_VAR_qr_secret_key: ${{ secrets.QR_SECRET_KEY }}
+          TF_VAR_image_tag: ${{ github.sha }}
 
-    - name: Get ECR Repository URL
-      id: ecr
-      run: |
-        ECR_URL=$(terraform output -raw ecr_repository_url)
-        echo "url=$ECR_URL" >> $GITHUB_OUTPUT
-      working-directory: ./terraform/environments/prod
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ap-south-1
+      - name: Get ECR Repository URL
+        id: ecr
+        run: |
+          ECR_URL=$(terraform output -raw ecr_repository_url)
+          echo "url=$ECR_URL" >> $GITHUB_OUTPUT
+        working-directory: ./terraform/environments/prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
 
-    - name: Login to Amazon ECR
-      run: |
-        aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ steps.ecr.outputs.url }}
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ap-south-1
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ steps.ecr.outputs.url }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
 
-    - name: Get Version from package.json
-      id: package-version
-      run: |
-        VERSION=$(jq -r .version package.json)
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Get Version from package.json
+        id: package-version
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-    - name: Build and Push Docker Image
-      run: |
-        docker build -t ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }} .
-        docker tag ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }} ${{ steps.ecr.outputs.url }}:latest
-        docker push ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }}
-        docker push ${{ steps.ecr.outputs.url }}:latest
-      env:
-        DOCKER_BUILDKIT: 1
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }} .
+          docker tag ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }} ${{ steps.ecr.outputs.url }}:latest
+          docker push ${{ steps.ecr.outputs.url }}:${{ steps.package-version.outputs.version }}
+          docker push ${{ steps.ecr.outputs.url }}:latest
+        env:
+          DOCKER_BUILDKIT: 1
 
-    - name: Terraform Apply - Create Lambda and API Gateway
-      run: |
-        terraform apply -auto-approve
-      working-directory: ./terraform/environments/prod
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ap-south-1
-        TF_VAR_project: iconcoderz
-        TF_VAR_environment: prod
-        TF_VAR_aws_region: ap-south-1
-        TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
-        TF_VAR_smtp_host: ${{ secrets.SMTP_HOST }}
-        TF_VAR_smtp_user: ${{ secrets.SMTP_USER }}
-        TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
-        TF_VAR_cloudinary_cloud_name: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
-        TF_VAR_cloudinary_api_key: ${{ secrets.CLOUDINARY_API_KEY }}
-        TF_VAR_cloudinary_api_secret: ${{ secrets.CLOUDINARY_API_SECRET }}
-        TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-        TF_VAR_base_url_client: ${{ secrets.BASE_URL_CLIENT }}
-        TF_VAR_qr_secret_key: ${{ secrets.QR_SECRET_KEY }}
-        TF_VAR_image_tag: ${{ steps.package-version.outputs.version }}
+      - name: Terraform Apply - Create Lambda and API Gateway
+        run: |
+          terraform apply -auto-approve
+        working-directory: ./terraform/environments/prod
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+          TF_VAR_project: iconcoderz
+          TF_VAR_environment: prod
+          TF_VAR_aws_region: ap-south-1
+          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+          TF_VAR_smtp_host: ${{ secrets.SMTP_HOST }}
+          TF_VAR_smtp_user: ${{ secrets.SMTP_USER }}
+          TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
+          TF_VAR_cloudinary_cloud_name: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          TF_VAR_cloudinary_api_key: ${{ secrets.CLOUDINARY_API_KEY }}
+          TF_VAR_cloudinary_api_secret: ${{ secrets.CLOUDINARY_API_SECRET }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+          TF_VAR_base_url_client: ${{ secrets.BASE_URL_CLIENT }}
+          TF_VAR_qr_secret_key: ${{ secrets.QR_SECRET_KEY }}
+          TF_VAR_image_tag: ${{ steps.package-version.outputs.version }}

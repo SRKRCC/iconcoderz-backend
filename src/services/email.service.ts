@@ -1,8 +1,14 @@
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
-import { config } from '../config/index.js';
-import { generateRegistrationEmailHTML, type UserData } from '../templates/registration-email.js';
-import { generateAttendanceEmailHTML, type AttendanceEmailData } from '../templates/attendance-email.js';
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
+import { config } from "../config/index.js";
+import {
+  generateRegistrationEmailHTML,
+  type UserData,
+} from "../templates/registration-email.js";
+import {
+  generateAttendanceEmailHTML,
+  type AttendanceEmailData,
+} from "../templates/attendance-email.js";
 
 interface EmailQueueItem {
   to: string;
@@ -30,7 +36,7 @@ export class EmailService {
   private static getTransporter(): Transporter {
     if (!this.transporter) {
       if (!config.services.smtp.host || !config.services.smtp.user) {
-        throw new Error('SMTP not configured');
+        throw new Error("SMTP not configured");
       }
 
       this.transporter = nodemailer.createTransport({
@@ -49,8 +55,8 @@ export class EmailService {
       });
 
       // Handle transporter errors
-      this.transporter.on('error', (err) => {
-        console.error('[EmailService] Transporter error:', err);
+      this.transporter.on("error", (err) => {
+        console.error("[EmailService] Transporter error:", err);
       });
     }
 
@@ -62,10 +68,10 @@ export class EmailService {
     fullName: string,
     registrationCode: string,
     qrCodeDataUrl: string,
-    userData: Partial<UserData>
+    userData: Partial<UserData>,
   ) {
     if (!config.services.smtp.host || !config.services.smtp.user) {
-      console.warn('[EmailService] SMTP not configured, skipping email.');
+      console.warn("[EmailService] SMTP not configured, skipping email.");
       return;
     }
 
@@ -73,10 +79,10 @@ export class EmailService {
       fullName,
       email: to,
       registrationCode,
-      phone: userData.phone || '',
-      registrationNumber: userData.registrationNumber || '',
-      branch: userData.branch || '',
-      yearOfStudy: userData.yearOfStudy || '',
+      phone: userData.phone || "",
+      registrationNumber: userData.registrationNumber || "",
+      branch: userData.branch || "",
+      yearOfStudy: userData.yearOfStudy || "",
       codechefHandle: userData.codechefHandle,
       leetcodeHandle: userData.leetcodeHandle,
       codeforcesHandle: userData.codeforcesHandle,
@@ -89,7 +95,9 @@ export class EmailService {
       retries: 0,
     });
 
-    console.log(`[EmailService] Email queued for ${to}. Queue size: ${this.emailQueue.length}`);
+    console.log(
+      `[EmailService] Email queued for ${to}. Queue size: ${this.emailQueue.length}`,
+    );
 
     if (!this.isProcessing) {
       await this.processQueue();
@@ -99,31 +107,27 @@ export class EmailService {
       // However, since this is a lambda which freezes, we must ensure we don't exit.
       // If processQueue is async and active, we can't easily "join" it without a promise reference.
       // Let's change processQueue tracking.
-      
-      // Actually, simplest fix for "fire and forget" turning into "awaitable" 
+      // Actually, simplest fix for "fire and forget" turning into "awaitable"
       // is to just await a polling loop or shared promise if complex.
       // But given the code structure, we can just await the processing if we keep track of the processing promise?
-      
-      // Let's try to just await processQueue if called. 
+      // Let's try to just await processQueue if called.
       // BUT if it's already running, calling it again might be wrong or it might return immediately.
-      
       // Refactored approach: ALWAYS call processQueue and let it handle concurrency or just wait for queue to drain.
       // Since sendConfirmation is called once per request usually, we can just await processQueue.
       // But if multiple calls happen, we need to be careful.
       // For this specific issue: just await this.processQueue().
-      // And we need to make sure multiple calls don't start multiple processors if not needed, 
+      // And we need to make sure multiple calls don't start multiple processors if not needed,
       // OR just let them run (might be fine if they just check queue length).
-      
       // Let's stick to the plan:
       // We will make sendConfirmation await the processing.
       // To handle the "already processing" case without race conditions or early exit:
       // We'll change logic to: while(queue.length > 0) { await processOne(); }
       // This effectively means the caller will wait until *everything* current in queue is gone.
     }
-    
+
     // Waiting logic:
     while (this.emailQueue.length > 0 || this.isProcessing) {
-        await this.delay(100);
+      await this.delay(100);
     }
   }
 
@@ -133,38 +137,49 @@ export class EmailService {
     }
 
     this.isProcessing = true;
-    console.log(`[EmailService] Starting queue processing. ${this.emailQueue.length} emails in queue.`);
+    console.log(
+      `[EmailService] Starting queue processing. ${this.emailQueue.length} emails in queue.`,
+    );
 
     try {
-        while (this.emailQueue.length > 0) {
+      while (this.emailQueue.length > 0) {
         const item = this.emailQueue[0];
 
         try {
-            await this.sendEmail(item);
-            this.emailQueue.shift();
-            console.log(`[EmailService] Email sent successfully to ${item.to}. Remaining: ${this.emailQueue.length}`);
+          await this.sendEmail(item);
+          this.emailQueue.shift();
+          console.log(
+            `[EmailService] Email sent successfully to ${item.to}. Remaining: ${this.emailQueue.length}`,
+          );
 
-            if (this.emailQueue.length > 0) {
+          if (this.emailQueue.length > 0) {
             await this.delay(this.EMAIL_DELAY);
-            }
+          }
         } catch (error) {
-            console.error(`[EmailService] Failed to send email to ${item.to}:`, error);
+          console.error(
+            `[EmailService] Failed to send email to ${item.to}:`,
+            error,
+          );
 
-            item.retries++;
-            if (item.retries >= this.MAX_RETRIES) {
-            console.error(`[EmailService] Max retries reached for ${item.to}. Removing from queue.`);
+          item.retries++;
+          if (item.retries >= this.MAX_RETRIES) {
+            console.error(
+              `[EmailService] Max retries reached for ${item.to}. Removing from queue.`,
+            );
             this.emailQueue.shift();
-            } else {
+          } else {
             this.emailQueue.shift();
             this.emailQueue.push(item);
-            console.log(`[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`);
+            console.log(
+              `[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`,
+            );
             await this.delay(this.RETRY_DELAY);
-            }
+          }
         }
-        }
+      }
     } finally {
-        this.isProcessing = false;
-        console.log('[EmailService] Queue processing completed.');
+      this.isProcessing = false;
+      console.log("[EmailService] Queue processing completed.");
     }
   }
 
@@ -174,22 +189,26 @@ export class EmailService {
 
     const info = await transporter.sendMail({
       from: {
-        name: 'IconCoderz 2K26',
+        name: "IconCoderz 2K26",
         address: config.services.smtp.user,
       },
       to: item.to,
-      subject: '🎉 Registration Confirmed - IconCoderz 2K26 | SRKR Coding Club',
+      subject: "🎉 Registration Confirmed - IconCoderz 2K26 | SRKR Coding Club",
       html: htmlContent,
       attachments: [
         {
           filename: `iconcoderz-qr-${item.userData.registrationCode}.png`,
           path: item.qrCodeDataUrl,
-          cid: 'qrcode',
+          cid: "qrcode",
         },
       ],
     });
 
-    console.log('[EmailService] Message sent: %s to %s', info.messageId, item.to);
+    console.log(
+      "[EmailService] Message sent: %s to %s",
+      info.messageId,
+      item.to,
+    );
   }
 
   private static delay(ms: number): Promise<void> {
@@ -198,7 +217,9 @@ export class EmailService {
 
   static async sendAttendanceConfirmation(to: string, fullName: string) {
     if (!config.services.smtp.host || !config.services.smtp.user) {
-      console.warn('[EmailService] SMTP not configured, skipping attendance email.');
+      console.warn(
+        "[EmailService] SMTP not configured, skipping attendance email.",
+      );
       return;
     }
 
@@ -208,15 +229,17 @@ export class EmailService {
       retries: 0,
     });
 
-    console.log(`[EmailService] Attendance email queued for ${to}. Queue size: ${this.attendanceQueue.length}`);
+    console.log(
+      `[EmailService] Attendance email queued for ${to}. Queue size: ${this.attendanceQueue.length}`,
+    );
 
     if (!this.isProcessingAttendance) {
       await this.processAttendanceQueue();
     }
-    
+
     // Waiting logic:
     while (this.attendanceQueue.length > 0 || this.isProcessingAttendance) {
-        await this.delay(100);
+      await this.delay(100);
     }
   }
 
@@ -226,42 +249,55 @@ export class EmailService {
     }
 
     this.isProcessingAttendance = true;
-    console.log(`[EmailService] Starting attendance queue processing. ${this.attendanceQueue.length} emails in queue.`);
+    console.log(
+      `[EmailService] Starting attendance queue processing. ${this.attendanceQueue.length} emails in queue.`,
+    );
 
     try {
-        while (this.attendanceQueue.length > 0) {
+      while (this.attendanceQueue.length > 0) {
         const item = this.attendanceQueue[0];
 
         try {
-            await this.sendAttendanceEmail(item);
-            this.attendanceQueue.shift();
-            console.log(`[EmailService] Attendance email sent successfully to ${item.to}. Remaining: ${this.attendanceQueue.length}`);
+          await this.sendAttendanceEmail(item);
+          this.attendanceQueue.shift();
+          console.log(
+            `[EmailService] Attendance email sent successfully to ${item.to}. Remaining: ${this.attendanceQueue.length}`,
+          );
 
-            if (this.attendanceQueue.length > 0) {
+          if (this.attendanceQueue.length > 0) {
             await this.delay(this.EMAIL_DELAY);
-            }
+          }
         } catch (error) {
-            console.error(`[EmailService] Failed to send attendance email to ${item.to}:`, error);
+          console.error(
+            `[EmailService] Failed to send attendance email to ${item.to}:`,
+            error,
+          );
 
-            item.retries++;
-            if (item.retries >= this.MAX_RETRIES) {
-            console.error(`[EmailService] Max retries reached for ${item.to}. Removing from queue.`);
+          item.retries++;
+          if (item.retries >= this.MAX_RETRIES) {
+            console.error(
+              `[EmailService] Max retries reached for ${item.to}. Removing from queue.`,
+            );
             this.attendanceQueue.shift();
-            } else {
+          } else {
             this.attendanceQueue.shift();
             this.attendanceQueue.push(item);
-            console.log(`[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`);
+            console.log(
+              `[EmailService] Retry ${item.retries}/${this.MAX_RETRIES} for ${item.to}. Moving to end of queue.`,
+            );
             await this.delay(this.RETRY_DELAY);
-            }
+          }
         }
-        }
+      }
     } finally {
-        this.isProcessingAttendance = false;
-        console.log('[EmailService] Attendance queue processing completed.');
+      this.isProcessingAttendance = false;
+      console.log("[EmailService] Attendance queue processing completed.");
     }
   }
 
-  private static async sendAttendanceEmail(item: AttendanceEmailQueueItem): Promise<void> {
+  private static async sendAttendanceEmail(
+    item: AttendanceEmailQueueItem,
+  ): Promise<void> {
     const transporter = this.getTransporter();
     const userData: AttendanceEmailData = {
       fullName: item.fullName,
@@ -271,15 +307,19 @@ export class EmailService {
 
     const info = await transporter.sendMail({
       from: {
-        name: 'IconCoderz 2K26',
+        name: "IconCoderz 2K26",
         address: config.services.smtp.user,
       },
       to: item.to,
-      subject: '🎉 Welcome to IconCoderz 2K26! Thanks for Attending',
+      subject: "🎉 Welcome to IconCoderz 2K26! Thanks for Attending",
       html: htmlContent,
     });
 
-    console.log('[EmailService] Attendance email sent: %s to %s', info.messageId, item.to);
+    console.log(
+      "[EmailService] Attendance email sent: %s to %s",
+      info.messageId,
+      item.to,
+    );
   }
 
   // Graceful shutdown
@@ -287,7 +327,7 @@ export class EmailService {
     if (this.transporter) {
       await this.transporter.close();
       this.transporter = null;
-      console.log('[EmailService] Transporter closed.');
+      console.log("[EmailService] Transporter closed.");
     }
   }
 }

@@ -3,11 +3,13 @@ export interface AttendanceEmailData {
   email: string;
 }
 
-const EVENT_DATE = 'February 23, 2026';
-const EVENT_TIME = '1:30 PM onwards';
-const EVENT_VENUE = 'SRKR Engineering College';
+const EVENT_DATE = "February 23, 2026";
+const EVENT_TIME = "1:30 PM onwards";
+const EVENT_VENUE = "SRKR Engineering College";
 
-export const generateAttendanceEmailHTML = (user: AttendanceEmailData): string => {
+export const generateAttendanceEmailHTML = (
+  user: AttendanceEmailData,
+): string => {
   return `
 <!DOCTYPE html>
 <html>
