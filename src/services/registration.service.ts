@@ -14,6 +14,8 @@ export class RegistrationService {
       phone: data.phone,
     });
 
+    console.log("[RegistrationService] Starting registration for", data);
+
     try {
       const existing = await prisma.user.findFirst({
         where: {
@@ -62,6 +64,8 @@ export class RegistrationService {
         },
       });
 
+      console.log("[RegistrationService] resgistered user", user);
+
       const qrCode = await QRService.generate(user.registrationCode, user.id);
 
       try {
@@ -81,7 +85,7 @@ export class RegistrationService {
           },
         );
       } catch (err) {
-        console.error("Failed to send confirmation email", err);
+        console.error("[RegistrationService] Failed to send confirmation email", err);
         // Don't fail registration due to email issues
       }
 
@@ -99,6 +103,7 @@ export class RegistrationService {
       return user;
     } catch (err) {
       // Log failure for investigation
+      console.error("[RegistrationService] Registration failed", err);
       await AuditService.create("REGISTRATION_FAILED", {
         error: (err as Error).message || err,
         input: {

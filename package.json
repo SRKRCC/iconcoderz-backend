@@ -35,6 +35,7 @@
     "@types/supertest": "^6.0.3",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
+    "husky": "9.1.7",
     "prisma": "^7.3.0",
     "supertest": "^7.2.2",
     "tsx": "^4.21.0",
@@ -46,7 +47,7 @@
   "license": "ISC",
   "main": "dist/index.js",
   "name": "iconcoderz",
-  "packageManager": "pnpm@10.28.0",
+  "packageManager": "pnpm@10.28.2",
   "scripts": {
     "build": "pnpm run swagger:generate && tsc",
     "dev": "tsx watch src/index.ts",
@@ -60,8 +61,10 @@
     "swagger:generate": "tsx src/utils/generate-swagger.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:email": "tsx scripts/test-email.ts"
+    "test:email": "tsx scripts/test-email.ts",
+    "check:version": "node ./scripts/check-package-version.cjs",
+    "prepare": "husky install"
   },
   "type": "module",
-  "version": "1.2.0"
+  "version": "1.2.0.1"
 }

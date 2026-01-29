@@ -7,7 +7,7 @@ dist
 
 /src/generated/prisma
 
-scripts
+custom_scripts
 
 docs
 **/*.tfvars
