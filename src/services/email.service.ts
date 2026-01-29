@@ -9,6 +9,7 @@ import {
   generateAttendanceEmailHTML,
   type AttendanceEmailData,
 } from "../templates/attendance-email.js";
+import { AuditService } from "./audit.service.js";
 
 interface EmailQueueItem {
   to: string;
@@ -99,6 +100,13 @@ export class EmailService {
       `[EmailService] Email queued for ${to}. Queue size: ${this.emailQueue.length}`,
     );
 
+    // Audit queued email
+    AuditService.create("EMAIL_QUEUED", {
+      to,
+      registrationCode: completeUserData.registrationCode,
+      fullName: completeUserData.fullName,
+    }).catch(() => {});
+
     if (!this.isProcessing) {
       await this.processQueue();
     } else {
@@ -146,11 +154,18 @@ export class EmailService {
         const item = this.emailQueue[0];
 
         try {
-          await this.sendEmail(item);
+          const info = await this.sendEmail(item);
           this.emailQueue.shift();
           console.log(
             `[EmailService] Email sent successfully to ${item.to}. Remaining: ${this.emailQueue.length}`,
           );
+
+          // Audit success
+          AuditService.create("EMAIL_SENT", {
+            to: item.to,
+            registrationCode: item.userData.registrationCode,
+            messageId: info?.messageId,
+          }).catch(() => {});
 
           if (this.emailQueue.length > 0) {
             await this.delay(this.EMAIL_DELAY);
@@ -160,6 +175,13 @@ export class EmailService {
             `[EmailService] Failed to send email to ${item.to}:`,
             error,
           );
+
+          // Audit failure
+          AuditService.create("EMAIL_FAILED", {
+            to: item.to,
+            error: (error as Error).message || error,
+            retries: item.retries,
+          }).catch(() => {});
 
           item.retries++;
           if (item.retries >= this.MAX_RETRIES) {
@@ -183,7 +205,7 @@ export class EmailService {
     }
   }
 
-  private static async sendEmail(item: EmailQueueItem): Promise<void> {
+  private static async sendEmail(item: EmailQueueItem): Promise<any> {
     const transporter = this.getTransporter();
     const htmlContent = generateRegistrationEmailHTML(item.userData);
 
@@ -209,6 +231,8 @@ export class EmailService {
       info.messageId,
       item.to,
     );
+
+    return info;
   }
 
   private static delay(ms: number): Promise<void> {
@@ -232,6 +256,13 @@ export class EmailService {
     console.log(
       `[EmailService] Attendance email queued for ${to}. Queue size: ${this.attendanceQueue.length}`,
     );
+
+    // Audit attendance email queued
+    AuditService.create("EMAIL_QUEUED", {
+      to,
+      fullName,
+      type: "ATTENDANCE",
+    }).catch(() => {});
 
     if (!this.isProcessingAttendance) {
       await this.processAttendanceQueue();
@@ -258,11 +289,17 @@ export class EmailService {
         const item = this.attendanceQueue[0];
 
         try {
-          await this.sendAttendanceEmail(item);
+          const info = await this.sendAttendanceEmail(item);
           this.attendanceQueue.shift();
           console.log(
             `[EmailService] Attendance email sent successfully to ${item.to}. Remaining: ${this.attendanceQueue.length}`,
           );
+
+          AuditService.create("EMAIL_SENT", {
+            to: item.to,
+            type: "ATTENDANCE",
+            messageId: info?.messageId,
+          }).catch(() => {});
 
           if (this.attendanceQueue.length > 0) {
             await this.delay(this.EMAIL_DELAY);
@@ -272,6 +309,13 @@ export class EmailService {
             `[EmailService] Failed to send attendance email to ${item.to}:`,
             error,
           );
+
+          AuditService.create("EMAIL_FAILED", {
+            to: item.to,
+            type: "ATTENDANCE",
+            error: (error as Error).message || error,
+            retries: item.retries,
+          }).catch(() => {});
 
           item.retries++;
           if (item.retries >= this.MAX_RETRIES) {
@@ -297,7 +341,7 @@ export class EmailService {
 
   private static async sendAttendanceEmail(
     item: AttendanceEmailQueueItem,
-  ): Promise<void> {
+  ): Promise<any> {
     const transporter = this.getTransporter();
     const userData: AttendanceEmailData = {
       fullName: item.fullName,
@@ -320,6 +364,8 @@ export class EmailService {
       info.messageId,
       item.to,
     );
+
+    return info;
   }
 
   // Graceful shutdown

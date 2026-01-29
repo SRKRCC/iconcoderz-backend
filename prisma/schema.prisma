@@ -87,6 +87,7 @@ model User {
   searchVector Unsupported("tsvector")?
 
   attendanceLogs AttendanceLog[]
+  audits         Audit[]
 
   @@index([email])
   @@index([registrationNumber])
@@ -126,4 +127,27 @@ model AttendanceLog {
   @@index([registrationId])
   @@index([adminId])
   @@index([scannedAt])
+}
+
+enum AuditEvent {
+  REGISTRATION_STARTED
+  REGISTRATION_SUCCESS
+  REGISTRATION_FAILED
+  EMAIL_QUEUED
+  EMAIL_SENT
+  EMAIL_FAILED
+}
+
+model Audit {
+  id        String     @id @default(cuid())
+  event     AuditEvent
+  payload   Json
+  userId    String?
+  createdAt DateTime   @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([event])
+  @@index([userId])
+  @@index([createdAt])
 }
