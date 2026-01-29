@@ -128,3 +128,20 @@ model AttendanceLog {
   @@index([scannedAt])
 }
 
+model Outbox {
+  id          String   @id @default(cuid())
+  aggregate   String
+  aggregateId String
+  type        String
+  payload     Json
+  status      String   @default("PENDING")
+  attempts    Int      @default(0)
+  nextRetryAt DateTime?
+  lastError   String?
+  createdAt   DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([status, nextRetryAt, createdAt])
+}
+
+

@@ -13,6 +13,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^7.0.12",
+    "pg": "^8.17.2",
     "qrcode": "^1.5.4",
     "redoc-express": "^2.1.3",
     "swagger-jsdoc": "^6.2.8",
@@ -62,6 +63,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:email": "tsx scripts/test-email.ts",
+    "worker:outbox": "tsx src/workers/outbox.worker.ts",
     "check:version": "node ./scripts/check-package-version.cjs",
     "prepare": "command -v husky >/dev/null 2>&1 && husky install || true"
   },

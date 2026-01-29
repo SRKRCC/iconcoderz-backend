@@ -107,36 +107,13 @@ export class EmailService {
       fullName: completeUserData.fullName,
     }).catch(() => {});
 
+    // Start processing in the background if not already running (fire-and-forget)
     if (!this.isProcessing) {
-      await this.processQueue();
-    } else {
-      // If already processing, we need to wait until the current items + new items are processed.
-      // A simple way for this simple service is to just wait a bit or implement a proper lock/wait mechanism.
-      // However, since this is a lambda which freezes, we must ensure we don't exit.
-      // If processQueue is async and active, we can't easily "join" it without a promise reference.
-      // Let's change processQueue tracking.
-      // Actually, simplest fix for "fire and forget" turning into "awaitable"
-      // is to just await a polling loop or shared promise if complex.
-      // But given the code structure, we can just await the processing if we keep track of the processing promise?
-      // Let's try to just await processQueue if called.
-      // BUT if it's already running, calling it again might be wrong or it might return immediately.
-      // Refactored approach: ALWAYS call processQueue and let it handle concurrency or just wait for queue to drain.
-      // Since sendConfirmation is called once per request usually, we can just await processQueue.
-      // But if multiple calls happen, we need to be careful.
-      // For this specific issue: just await this.processQueue().
-      // And we need to make sure multiple calls don't start multiple processors if not needed,
-      // OR just let them run (might be fine if they just check queue length).
-      // Let's stick to the plan:
-      // We will make sendConfirmation await the processing.
-      // To handle the "already processing" case without race conditions or early exit:
-      // We'll change logic to: while(queue.length > 0) { await processOne(); }
-      // This effectively means the caller will wait until *everything* current in queue is gone.
+      void this.processQueue();
     }
 
-    // Waiting logic:
-    while (this.emailQueue.length > 0 || this.isProcessing) {
-      await this.delay(100);
-    }
+    // Return immediately; caller should not block on email delivery.
+    return;
   }
 
   private static async processQueue() {
@@ -231,6 +208,55 @@ export class EmailService {
       info.messageId,
       item.to,
     );
+
+    return info;
+  }
+
+  static async sendConfirmationNow(
+    to: string,
+    fullName: string,
+    registrationCode: string,
+    qrCodeDataUrl: string,
+    userData: Partial<UserData>,
+  ) {
+    if (!config.services.smtp.host || !config.services.smtp.user) {
+      throw new Error("SMTP not configured");
+    }
+
+    const completeUserData: UserData = {
+      fullName,
+      email: to,
+      registrationCode,
+      phone: userData.phone || "",
+      registrationNumber: userData.registrationNumber || "",
+      branch: userData.branch || "",
+      yearOfStudy: userData.yearOfStudy || "",
+      codechefHandle: userData.codechefHandle,
+      leetcodeHandle: userData.leetcodeHandle,
+      codeforcesHandle: userData.codeforcesHandle,
+    };
+
+    const transporter = this.getTransporter();
+    const htmlContent = generateRegistrationEmailHTML(completeUserData);
+
+    const info = await transporter.sendMail({
+      from: {
+        name: "IconCoderz 2K26",
+        address: config.services.smtp.user,
+      },
+      to,
+      subject: "Registration Confirmed - IconCoderz 2K26 | SRKR Coding Club",
+      html: htmlContent,
+      attachments: [
+        {
+          filename: `iconcoderz-qr-${registrationCode}.png`,
+          path: qrCodeDataUrl,
+          cid: "qrcode",
+        },
+      ],
+    });
+
+    console.log("[EmailService] Message sent (direct): %s to %s", info.messageId, to);
 
     return info;
   }

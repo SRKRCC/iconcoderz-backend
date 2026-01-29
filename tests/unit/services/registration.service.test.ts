@@ -57,8 +57,11 @@ describe("RegistrationService", () => {
      * and email sending. Expects the user object to be returned with an ID.
      */
     it("should register a new user successfully", async () => {
-      prismaMock.user.findFirst.mockResolvedValue(null);
-      prismaMock.user.create.mockResolvedValue({
+      // No existing users on any unique checks
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      // Registration now performs an atomic transaction (user + outbox)
+      prismaMock.$transaction.mockResolvedValue({
         id: "user-id-1",
         ...mockUserData,
         registrationCode: "IC2K26-11111111",
@@ -68,27 +71,13 @@ describe("RegistrationService", () => {
         attended: false,
       } as any);
 
-      (QRService.generate as any).mockResolvedValue(
-        "data:image/png;base64,...",
-      );
-      (EmailService.sendConfirmation as any).mockResolvedValue(undefined);
-
       const result = await RegistrationService.register(mockUserData);
 
-      expect(prismaMock.user.findFirst).toHaveBeenCalled();
-      expect(prismaMock.user.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            email: mockUserData.email,
-            registrationNumber: mockUserData.registrationNumber,
-          }),
-        }),
-      );
-      expect(QRService.generate).toHaveBeenCalledWith(
-        "IC2K26-11111111",
-        "user-id-1",
-      );
-      expect(EmailService.sendConfirmation).toHaveBeenCalled();
+      expect(prismaMock.user.findUnique).toHaveBeenCalledTimes(4);
+      expect(prismaMock.$transaction).toHaveBeenCalled();
+      // QR/email should NOT be called synchronously anymore
+      expect(QRService.generate).not.toHaveBeenCalled();
+      expect(EmailService.sendConfirmation).not.toHaveBeenCalled();
       expect(result.id).toBe("user-id-1");
     });
 
@@ -98,7 +87,8 @@ describe("RegistrationService", () => {
      * Expects an error preventing registration.
      */
     it("should throw error if email already exists", async () => {
-      prismaMock.user.findFirst.mockResolvedValue({
+      // Simulate email conflict: first findUnique (email) returns a record
+      prismaMock.user.findUnique.mockResolvedValueOnce({
         email: "john@test.com",
         registrationNumber: "other",
         phone: "other",
@@ -116,7 +106,8 @@ describe("RegistrationService", () => {
      * Expects an error preventing registration.
      */
     it("should throw error if registration number already exists", async () => {
-      prismaMock.user.findFirst.mockResolvedValue({
+      // Simulate registration number conflict: second findUnique (registrationNumber) returns a record
+      prismaMock.user.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({
         email: "other@test.com",
         registrationNumber: "1234567890",
         phone: "other",
@@ -134,7 +125,8 @@ describe("RegistrationService", () => {
      * Expects an error preventing registration.
      */
     it("should throw error if phone already exists", async () => {
-      prismaMock.user.findFirst.mockResolvedValue({
+      // Simulate phone conflict: first two checks null, third (phone) returns record
+      prismaMock.user.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce({
         email: "other@test.com",
         registrationNumber: "other",
         phone: "1234567890",
@@ -152,12 +144,17 @@ describe("RegistrationService", () => {
      * Expects an error preventing double use of payment proofs.
      */
     it("should throw error if transactionId already exists", async () => {
-      prismaMock.user.findFirst.mockResolvedValue({
-        email: "other@test.com",
-        registrationNumber: "other",
-        phone: "other",
-        transactionId: "txn_12345",
-      } as any);
+      // Simulate transactionId conflict: first three checks null, fourth returns record
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          email: "other@test.com",
+          registrationNumber: "other",
+          phone: "other",
+          transactionId: "txn_12345",
+        } as any);
 
       await expect(RegistrationService.register(mockUserData)).rejects.toThrow(
         "Transaction ID already used",

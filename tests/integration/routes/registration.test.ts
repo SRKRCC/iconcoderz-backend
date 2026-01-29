@@ -59,8 +59,11 @@ describe("POST /api/v1/registration", () => {
    * the user ID and registration code are returned as expected.
    */
   it("should register user successfully", async () => {
-    prismaMock.user.findFirst.mockResolvedValue(null);
-    prismaMock.user.create.mockResolvedValue({
+    // No conflicts on unique checks
+    prismaMock.user.findUnique.mockResolvedValue(null);
+
+    // The registration flow uses a transaction to create user + outbox
+    prismaMock.$transaction.mockResolvedValue({
       id: "user-2",
       ...validPayload,
       registrationCode: "IC2K26-11111111",
@@ -99,7 +102,8 @@ describe("POST /api/v1/registration", () => {
    * with a message indicating the email is already registered.
    */
   it("should return 409 if user already exists", async () => {
-    prismaMock.user.findFirst.mockResolvedValue({
+    // Simulate email conflict: first findUnique (email) returns a record
+    prismaMock.user.findUnique.mockResolvedValueOnce({
       email: "jane@test.com",
       registrationNumber: "other",
     } as any);
