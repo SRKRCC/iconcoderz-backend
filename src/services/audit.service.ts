@@ -1,17 +1,9 @@
-import { prisma } from "../utils/prisma.js";
-
 export class AuditService {
-  static async create(event: string, payload: any, userId?: string) {
+  static async create(event: string, payload: any): Promise<void> {
     try {
-      await prisma.audit.create({
-        data: {
-          event: event as any,
-          payload: payload ?? {},
-          userId,
-        },
-      });
+      console.log("[AuditService]", event, payload);
     } catch (err) {
-      console.warn("[AuditService] Failed to write audit record", err);
+      console.warn("[AuditService] Failed to log audit record", err);
     }
   }
 }

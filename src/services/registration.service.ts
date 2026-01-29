@@ -7,7 +7,7 @@ import { AuditService } from "./audit.service.js";
 
 export class RegistrationService {
   static async register(data: UserInput) {
-    // Log start of registration
+
     await AuditService.create("REGISTRATION_STARTED", {
       email: data.email,
       registrationNumber: data.registrationNumber,
@@ -90,15 +90,10 @@ export class RegistrationService {
       }
 
       // Log success
-      await AuditService.create(
-        "REGISTRATION_SUCCESS",
-        {
-          userId: user.id,
-          registrationCode: user.registrationCode,
-          email: user.email,
-        },
-        user.id,
-      );
+      await AuditService.create("REGISTRATION_SUCCESS", {
+        registrationCode: user.registrationCode,
+        email: user.email,
+      });
 
       return user;
     } catch (err) {

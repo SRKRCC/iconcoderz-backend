@@ -13,8 +13,12 @@ export const initPrisma = () => {
     connectionString: config.db.url,
   });
 
+  console.log("[Prisma] Using Neon adapter");
+
   prisma = new PrismaClient({
     adapter,
     log: config.env === "development" ? ["query", "error", "warn"] : ["error"],
   });
+
+  console.log("[Prisma] Client initialized");
 };
