@@ -63,7 +63,7 @@
     "test:watch": "vitest",
     "test:email": "tsx scripts/test-email.ts",
     "check:version": "node ./scripts/check-package-version.cjs",
-    "prepare": "husky install"
+    "prepare": "command -v husky >/dev/null 2>&1 && husky install || true"
   },
   "type": "module",
   "version": "1.2.0.1"
