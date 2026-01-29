@@ -56,9 +56,12 @@ model User {
   phone              String @unique
 
   // Academic Info
-  yearOfStudy YearOfStudy
-  branch      Branch
-  gender      Gender
+  collegeName           String      @default("SRKR Engineering College")
+  yearOfStudy           YearOfStudy
+  branch                Branch
+  gender                Gender
+  isCodingClubAffiliate Boolean     @default(false)
+  affiliateId           String?
 
   // CP Handles (optional)
   codechefHandle   String?
