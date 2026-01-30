@@ -75,9 +75,17 @@ async function claimAndProcess(): Promise<number> {
           throw new Error(`QR generation failed: ${(err as Error).message || err}`);
         }
 
-        // Send email directly (synchronous)
+        // Send email directly (synchronous) and forward payload fields
         try {
-          await EmailService.sendConfirmationNow(email, fullName, registrationCode, qrDataUrl, {});
+          await EmailService.sendConfirmationNow(email, fullName, registrationCode, qrDataUrl, {
+            phone: payload.phone,
+            registrationNumber: payload.registrationNumber,
+            branch: payload.branch,
+            yearOfStudy: payload.yearOfStudy,
+            codechefHandle: payload.codechefHandle,
+            leetcodeHandle: payload.leetcodeHandle,
+            codeforcesHandle: payload.codeforcesHandle,
+          });
         } catch (err) {
           throw new Error(`Email send failed: ${(err as Error).message || err}`);
         }

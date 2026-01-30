@@ -20,7 +20,10 @@ router.patch(
   AdminController.updatePaymentStatus,
 );
 
+router.post("/users/delete", authenticateAdmin, AdminController.deleteUsers);
+
 router.get("/outbox", authenticateAdmin, AdminController.getAllOutbox);
 router.post("/outbox/send", authenticateAdmin, AdminController.sendOutboxEmails);
+router.post("/outbox/delete", authenticateAdmin, AdminController.deleteOutbox);
 
 export { router as adminRoutes };

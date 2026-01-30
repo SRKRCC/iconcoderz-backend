@@ -62,6 +62,13 @@ export class RegistrationService {
             email: created.email,
             fullName: created.fullName,
             registrationCode: created.registrationCode,
+            phone: created.phone,
+            registrationNumber: created.registrationNumber,
+            branch: created.branch,
+            yearOfStudy: created.yearOfStudy,
+            codechefHandle: created.codechefHandle,
+            leetcodeHandle: created.leetcodeHandle,
+            codeforcesHandle: created.codeforcesHandle,
           };
 
           await tx.outbox.create({

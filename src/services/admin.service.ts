@@ -66,6 +66,8 @@ export class AdminService {
       const params: any[] = [];
       let paramIndex = 1;
 
+      conditions.push(`"isActive" = true`);
+
       conditions.push(
         `"searchVector" @@ to_tsquery('english', $${paramIndex})`,
       );
@@ -104,7 +106,7 @@ export class AdminService {
       return users;
     }
 
-    const where: any = {};
+    const where: any = { isActive: true };
 
     if (filters?.paymentStatus) {
       where.paymentStatus = filters.paymentStatus;
@@ -219,8 +221,10 @@ export class AdminService {
   static async getAllOutbox(status?: string) {
     const where: any = {};
 
-    if (status && ["PENDING", "PROCESSING", "DONE", "FAILED"].includes(status)) {
+    if (status && ["PENDING", "PROCESSING", "DONE", "FAILED", "DELETED"].includes(status)) {
       where.status = status;
+    } else {
+      where.status = { not: "DELETED" };
     }
 
     const outboxEntries = await prisma.outbox.findMany({
@@ -229,6 +233,36 @@ export class AdminService {
     });
 
     return outboxEntries;
+  }
+
+  static async deleteOutbox(outboxIds: string[]) {
+    const results = {
+      success: [] as string[],
+      failed: [] as { id: string; error: string }[],
+    };
+
+    for (const outboxId of outboxIds) {
+      try {
+        const outboxEntry = await prisma.outbox.findUnique({ where: { id: outboxId } });
+        if (!outboxEntry) {
+          results.failed.push({ id: outboxId, error: "Outbox entry not found" });
+          continue;
+        }
+
+        // Soft-delete by setting status to DELETED and processedAt
+        await prisma.outbox.update({
+          where: { id: outboxId },
+          data: { status: "DELETED", processedAt: new Date(), lastError: null },
+        });
+
+        results.success.push(outboxId);
+      } catch (error) {
+        console.error(`Failed to delete outbox ${outboxId}:`, error);
+        results.failed.push({ id: outboxId, error: (error as Error).message || String(error) });
+      }
+    }
+
+    return results;
   }
 
   static async sendOutboxEmails(outboxIds: string[]) {
@@ -306,6 +340,31 @@ export class AdminService {
           id: outboxId,
           error: (error as Error).message || String(error),
         });
+      }
+    }
+
+    return results;
+  }
+
+  static async deleteUsers(userIds: string[]) {
+    const results = {
+      success: [] as string[],
+      failed: [] as { id: string; error: string }[],
+    };
+
+    for (const userId of userIds) {
+      try {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+          results.failed.push({ id: userId, error: 'User not found' });
+          continue;
+        }
+
+        await prisma.user.update({ where: { id: userId }, data: { isActive: false } });
+        results.success.push(userId);
+      } catch (error) {
+        console.error(`Failed to delete user ${userId}:`, error);
+        results.failed.push({ id: userId, error: (error as Error).message || String(error) });
       }
     }
 

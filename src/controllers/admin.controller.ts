@@ -103,4 +103,32 @@ export class AdminController {
       return next(error);
     }
   }
+
+  static async deleteOutbox(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { outboxIds } = req.body;
+      if (!outboxIds || !Array.isArray(outboxIds) || outboxIds.length === 0) {
+        return sendResponse(res, 400, "outboxIds array is required");
+      }
+
+      const result = await AdminService.deleteOutbox(outboxIds);
+      return sendResponse(res, 200, "Outbox deletion completed", result);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  static async deleteUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userIds } = req.body;
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return sendResponse(res, 400, "userIds array is required");
+      }
+
+      const result = await AdminService.deleteUsers(userIds);
+      return sendResponse(res, 200, "Users deletion completed", result);
+    } catch (error) {
+      return next(error);
+    }
+  }
 }
