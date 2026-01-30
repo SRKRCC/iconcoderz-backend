@@ -78,4 +78,29 @@ export class AdminController {
       return next(error);
     }
   }
+
+  static async getAllOutbox(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { status } = req.query;
+      const outboxEntries = await AdminService.getAllOutbox(status as string);
+      sendResponse(res, 200, "Outbox entries retrieved successfully", outboxEntries);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async sendOutboxEmails(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { outboxIds } = req.body;
+      
+      if (!outboxIds || !Array.isArray(outboxIds) || outboxIds.length === 0) {
+        return sendResponse(res, 400, "outboxIds array is required");
+      }
+
+      const result = await AdminService.sendOutboxEmails(outboxIds);
+      return sendResponse(res, 200, "Email sending completed", result);
+    } catch (error) {
+      return next(error);
+    }
+  }
 }

@@ -20,4 +20,7 @@ router.patch(
   AdminController.updatePaymentStatus,
 );
 
+router.get("/outbox", authenticateAdmin, AdminController.getAllOutbox);
+router.post("/outbox/send", authenticateAdmin, AdminController.sendOutboxEmails);
+
 export { router as adminRoutes };

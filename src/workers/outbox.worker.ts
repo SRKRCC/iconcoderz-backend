@@ -1,17 +1,9 @@
 import { prisma } from "../utils/prisma.js";
 import { QRService } from "../services/qr.service.js";
 import { EmailService } from "../services/email.service.js";
-import { config } from "../config/index.js";
-import { Client as PgClient, type Notification } from "pg";
 
-// Backoff sequence (ms) — adaptive; we start idle at 5 minutes per request
-const BACKOFF_SEQUENCE = [2000, 5000, 15000, 60000, 300000]; // 2s → 5m (last)
 const BATCH_SIZE = 5;
 const MAX_ATTEMPTS = 5;
-
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
 
 async function ensureNotifyTrigger() {
   const sql = `DO $$
@@ -37,32 +29,6 @@ END$$;`;
     console.log("[OutboxWorker] Ensured NOTIFY trigger exists");
   } catch (err) {
     console.error("[OutboxWorker] Failed to ensure NOTIFY trigger:", err);
-  }
-}
-
-let pgListener: PgClient | null = null;
-
-async function setupListener(onNotify: (payload: string) => void) {
-  try {
-    pgListener = new PgClient({ connectionString: config.db.url });
-    await pgListener.connect();
-    pgListener.on('notification', (msg: Notification) => {
-      if (msg.channel === 'outbox_insert') {
-        try {
-          onNotify(msg.payload || '');
-        } catch (err) {
-          console.error('[OutboxWorker] Error handling notification', err);
-        }
-      }
-    });
-    await pgListener.query('LISTEN outbox_insert');
-    console.log('[OutboxWorker] Listening for outbox_insert notifications');
-  } catch (err) {
-    console.error('[OutboxWorker] Failed to setup listener:', err);
-    try {
-      if (pgListener) await pgListener.end();
-    } catch {}
-    pgListener = null;
   }
 }
 
@@ -146,52 +112,23 @@ async function claimAndProcess(): Promise<number> {
   return rows.length;
 }
 
-async function main() {
-  console.log("[OutboxWorker] Starting worker");
-
-  // Ensure DB trigger exists to emit NOTIFY on insert
+/**
+ * One-off processing function intended for scheduled Lambdas.
+ * Ensures the DB trigger exists and processes outbox rows in batches until none remain.
+ * Returns the total number of processed rows.
+ */
+export async function processOutboxOnce(): Promise<number> {
+  console.log("[OutboxWorker] Running one-off processing (processOutboxOnce)");
   await ensureNotifyTrigger();
 
-  // Setup LISTEN/NOTIFY
-  let notifyPending = false;
-  await setupListener((_payload) => {
-    // when notified, we set a flag to trigger immediate processing
-    notifyPending = true;
-  });
-
-  // adaptive backoff index; start at the last (5m) to reduce DB polling when idle
-  let backoffIndex = BACKOFF_SEQUENCE.length - 1;
-
-  while (true) {
-    try {
-      // If a notification was received, process immediately and reset backoff
-      if (notifyPending) {
-        notifyPending = false;
-        const processed = await claimAndProcess();
-        if (processed > 0) backoffIndex = 0;
-        continue; // immediately loop again
-      }
-
-      const processed = await claimAndProcess();
-      if (processed > 0) {
-        backoffIndex = 0;
-        continue; // more work likely; process immediately
-      }
-
-      // No work found; increase backoff up to max index
-      backoffIndex = Math.min(backoffIndex + 1, BACKOFF_SEQUENCE.length - 1);
-      const sleepMs = BACKOFF_SEQUENCE[backoffIndex];
-      console.log(`[OutboxWorker] No work found, sleeping ${sleepMs}ms (backoff index ${backoffIndex})`);
-      await sleep(sleepMs);
-    } catch (err) {
-      console.error("[OutboxWorker] Error in processing loop:", err);
-      // On error, wait a short time before retrying to avoid busy loop
-      await sleep(5000);
-    }
+  let totalProcessed = 0;
+  // Process until no more rows are found; cap iterations for safety
+  for (let i = 0; i < 1000; i++) {
+    const processed = await claimAndProcess();
+    totalProcessed += processed;
+    if (processed === 0) break;
   }
-}
 
-main().catch((err) => {
-  console.error("[OutboxWorker] Fatal error", err);
-  process.exit(1);
-});
+  console.log(`[OutboxWorker] processOutboxOnce finished, processed=${totalProcessed}`);
+  return totalProcessed;
+}

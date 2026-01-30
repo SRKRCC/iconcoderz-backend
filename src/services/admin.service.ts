@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import { AdminLoginInput } from "../dtos/admin.dto.js";
 import { config } from "../config/index.js";
 import { cache, CacheKeys, CacheTTL } from "../utils/cache.js";
+import { QRService } from "./qr.service.js";
+import { EmailService } from "./email.service.js";
 
 export class AdminService {
   static async login(data: AdminLoginInput) {
@@ -212,5 +214,101 @@ export class AdminService {
         };
       },
     );
+  }
+
+  static async getAllOutbox(status?: string) {
+    const where: any = {};
+
+    if (status && ["PENDING", "PROCESSING", "DONE", "FAILED"].includes(status)) {
+      where.status = status;
+    }
+
+    const outboxEntries = await prisma.outbox.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return outboxEntries;
+  }
+
+  static async sendOutboxEmails(outboxIds: string[]) {
+    const results = {
+      success: [] as string[],
+      failed: [] as { id: string; error: string }[],
+    };
+
+    for (const outboxId of outboxIds) {
+      try {
+        const outboxEntry = await prisma.outbox.findUnique({
+          where: { id: outboxId },
+        });
+
+        if (!outboxEntry) {
+          results.failed.push({ id: outboxId, error: "Outbox entry not found" });
+          continue;
+        }
+
+        if (outboxEntry.status === "DONE") {
+          results.failed.push({ id: outboxId, error: "Already processed" });
+          continue;
+        }
+
+        await prisma.outbox.update({
+          where: { id: outboxId },
+          data: {
+            status: "PROCESSING",
+            attempts: outboxEntry.attempts + 1,
+          },
+        });
+
+        const payload = outboxEntry.payload as any;
+
+        if (outboxEntry.type === "send_confirmation") {
+          const { registrationCode, userId, email, fullName } = payload;
+
+          const qrDataUrl = await QRService.generate(registrationCode, userId);
+
+          await EmailService.sendConfirmationNow(email, fullName, registrationCode, qrDataUrl, {
+            phone: payload.phone,
+            registrationNumber: payload.registrationNumber,
+            branch: payload.branch,
+            yearOfStudy: payload.yearOfStudy,
+            codechefHandle: payload.codechefHandle,
+            leetcodeHandle: payload.leetcodeHandle,
+            codeforcesHandle: payload.codeforcesHandle,
+          });
+
+          await prisma.outbox.update({
+            where: { id: outboxId },
+            data: {
+              status: "DONE",
+              processedAt: new Date(),
+              lastError: null,
+            },
+          });
+
+          results.success.push(outboxId);
+        } else {
+          results.failed.push({ id: outboxId, error: "Unknown outbox type" });
+        }
+      } catch (error) {
+        console.error(`Failed to process outbox ${outboxId}:`, error);
+
+        await prisma.outbox.update({
+          where: { id: outboxId },
+          data: {
+            status: "PENDING",
+            lastError: (error as Error).message || String(error),
+          },
+        });
+
+        results.failed.push({
+          id: outboxId,
+          error: (error as Error).message || String(error),
+        });
+      }
+    }
+
+    return results;
   }
 }
