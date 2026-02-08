@@ -29,12 +29,14 @@ export class AdminController {
 
   static async getAllUsers(req: Request, res: Response, next: NextFunction) {
     try {
-      const { paymentStatus, branch, yearOfStudy, search } = req.query;
+      const { paymentStatus, branch, yearOfStudy, search, collegeName, isCodingClubAffiliate } = req.query;
 
       const users = await AdminService.getAllUsers({
         paymentStatus: paymentStatus as string,
         branch: branch as string,
         yearOfStudy: yearOfStudy as string,
+        collegeName: collegeName as string,
+        isCodingClubAffiliate: isCodingClubAffiliate as string,
         search: search as string,
       });
 

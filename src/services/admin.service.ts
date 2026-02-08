@@ -57,6 +57,8 @@ export class AdminService {
     paymentStatus?: string;
     branch?: string;
     yearOfStudy?: string;
+    collegeName?: string;
+    isCodingClubAffiliate?: string;
     search?: string;
   }) {
     if (filters?.search && filters.search.trim()) {
@@ -89,6 +91,16 @@ export class AdminService {
         params.push(filters.yearOfStudy);
         paramIndex++;
       }
+      if (filters.collegeName) {
+        conditions.push(`"collegeName" ILIKE $${paramIndex}`);
+        params.push(`%${filters.collegeName}%`);
+        paramIndex++;
+      }
+      if (filters.isCodingClubAffiliate) {
+        conditions.push(`"isCodingClubAffiliate" = $${paramIndex}::boolean`);
+        params.push(filters.isCodingClubAffiliate === 'true');
+        paramIndex++;
+      }
 
       const whereClause =
         conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -96,7 +108,8 @@ export class AdminService {
       // Exclude searchVector from SELECT to avoid deserialization error
       const users = await prisma.$queryRawUnsafe<any[]>(
         `SELECT id, "registrationCode", "fullName", "registrationNumber", email, phone, 
-                "yearOfStudy", branch, gender, "codechefHandle", "leetcodeHandle", "codeforcesHandle",
+                "collegeName", "yearOfStudy", branch, gender, "isCodingClubAffiliate", "affiliateId",
+                "codechefHandle", "leetcodeHandle", "codeforcesHandle",
                 "transactionId", "screenshotUrl", "paymentStatus", attended, "attendedAt", 
                 "attendedBy", "checkInCount", "createdAt", "updatedAt"
          FROM "User" ${whereClause} ORDER BY "createdAt" DESC`,
@@ -118,6 +131,17 @@ export class AdminService {
 
     if (filters?.yearOfStudy) {
       where.yearOfStudy = filters.yearOfStudy;
+    }
+
+    if (filters?.collegeName) {
+      where.collegeName = {
+        contains: filters.collegeName,
+        mode: 'insensitive'
+      };
+    }
+
+    if (filters?.isCodingClubAffiliate) {
+      where.isCodingClubAffiliate = filters.isCodingClubAffiliate === 'true';
     }
 
     const users = await prisma.user.findMany({
