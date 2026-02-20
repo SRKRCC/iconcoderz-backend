@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import { z } from "zod";
-import { getSecret } from "./secrets.js";
 
 dotenv.config();
 
@@ -75,52 +74,6 @@ export const config = {
 
 export async function initConfig() {
   if (config.initialized) return;
-
-  if (config.env === "production") {
-    console.log("Fetching secrets from AWS Secrets Manager...");
-
-    const dbSecrets = await getSecret("iconcoderz/prod/db-url");
-    if (dbSecrets && dbSecrets.url) config.db.url = dbSecrets.url;
-
-    const cloudinarySecrets = await getSecret("iconcoderz/prod/cloudinary-api");
-    if (cloudinarySecrets) {
-      config.services.cloudinary.cloudName = cloudinarySecrets.cloud_name;
-      config.services.cloudinary.apiKey = cloudinarySecrets.api_key;
-      config.services.cloudinary.apiSecret = cloudinarySecrets.api_secret;
-    }
-
-    const smtpSecrets = await getSecret("iconcoderz/prod/smtp-credentials");
-    if (smtpSecrets) {
-      config.services.smtp.host = smtpSecrets.host;
-      config.services.smtp.user = smtpSecrets.user;
-      config.services.smtp.pass = smtpSecrets.password;
-    }
-
-    const jwtSecrets = await getSecret("iconcoderz/prod/jwt-config");
-    if (jwtSecrets && jwtSecrets.secret) {
-      config.jwt.secret = jwtSecrets.secret;
-    }
-
-    const clientSecrets = await getSecret("iconcoderz/prod/client-config");
-    if (clientSecrets && clientSecrets.base_url) {
-      const dbBaseUrl = clientSecrets.base_url;
-      config.clientUrl = Array.isArray(dbBaseUrl) ? dbBaseUrl[0] : dbBaseUrl;
-
-      // Update CORS origins with production client URL
-      const origins = Array.isArray(dbBaseUrl) ? dbBaseUrl : [dbBaseUrl];
-      config.cors.origin = [
-        ...origins,
-        "https://www.iconcoderz.srkrcodingclub.in",
-        "https://iconcoderz.srkrcodingclub.in",
-        "https://iconcoderz.pages.dev",
-      ];
-    }
-
-    const qrSecrets = await getSecret("iconcoderz/prod/qr-config");
-    if (qrSecrets && qrSecrets.secret_key) {
-      config.qr.secretKey = qrSecrets.secret_key;
-    }
-  }
 
   config.initialized = true;
 }

@@ -29,20 +29,6 @@ resource "aws_iam_role_policy" "lambda_cloudwatch_logs" {
   })
 }
 
-resource "aws_iam_role_policy" "lambda_secrets" {
-  name = "${var.project}-${var.environment}-secrets"
-  role = aws_iam_role.lambda_execution.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
-      Resource = "arn:aws:secretsmanager:ap-south-1:*:secret:${var.project}/${var.environment}/*"
-    }]
-  })
-}
-
 resource "aws_iam_role_policy" "lambda_ecr" {
   name = "${var.project}-${var.environment}-ecr"
   role = aws_iam_role.lambda_execution.id

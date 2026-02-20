@@ -49,7 +49,7 @@ variable "jwt_secret" {
 }
 
 variable "base_url_client" {
-  type = list(string)
+  type = string
 }
 
 variable "qr_secret_key" {
@@ -58,5 +58,6 @@ variable "qr_secret_key" {
 }
 
 variable "image_tag" {
-  type = string
+  type    = string
+  default = "latest"
 }

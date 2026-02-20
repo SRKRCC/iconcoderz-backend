@@ -27,11 +27,11 @@ module "iam" {
   environment = var.environment
 }
 
-module "secrets" {
-  source      = "../../modules/secrets"
-  project     = var.project
-  environment = var.environment
-
+module "lambda_api" {
+  source                = "../../modules/lambda-api"
+  project               = var.project
+  environment           = var.environment
+  role_arn              = module.iam.lambda_role_arn
   database_url          = var.database_url
   smtp_host             = var.smtp_host
   smtp_user             = var.smtp_user
@@ -42,15 +42,7 @@ module "secrets" {
   jwt_secret            = var.jwt_secret
   base_url_client       = var.base_url_client
   qr_secret_key         = var.qr_secret_key
-}
-
-module "lambda_api" {
-  source       = "../../modules/lambda-api"
-  project      = var.project
-  environment  = var.environment
-  role_arn     = module.iam.lambda_role_arn
-  database_url = var.database_url
-  image_tag    = var.image_tag
+  image_tag             = var.image_tag
 }
 
 module "api_gateway" {
@@ -75,8 +67,4 @@ output "lambda_role_arn" {
 
 output "ecr_repository_url" {
   value = module.lambda_api.ecr_repository_url
-}
-
-output "secret_database_url_arn" {
-  value = module.secrets.database_url_arn
 }

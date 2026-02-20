@@ -4,11 +4,11 @@ module "iam" {
   environment = var.environment
 }
 
-module "secrets" {
-  source      = "./modules/secrets"
-  project     = var.project
-  environment = var.environment
-
+module "lambda_api" {
+  source                = "./modules/lambda-api"
+  project               = var.project
+  environment           = var.environment
+  role_arn              = module.iam.lambda_role_arn
   database_url          = var.database_url
   smtp_host             = var.smtp_host
   smtp_user             = var.smtp_user
@@ -19,14 +19,7 @@ module "secrets" {
   jwt_secret            = var.jwt_secret
   base_url_client       = var.base_url_client
   qr_secret_key         = var.qr_secret_key
-}
-
-module "lambda_api" {
-  source       = "./modules/lambda-api"
-  project      = var.project
-  environment  = var.environment
-  role_arn     = module.iam.lambda_role_arn
-  database_url = var.database_url
+  image_tag             = "latest"
 }
 
 module "api_gateway" {
@@ -47,16 +40,4 @@ output "lambda_function_name" {
 
 output "lambda_role_arn" {
   value = module.iam.lambda_role_arn
-}
-
-output "secret_database_url_arn" {
-  value = module.secrets.database_url_arn
-}
-
-output "secret_smtp_arn" {
-  value = module.secrets.smtp_credentials_arn
-}
-
-output "secret_cloudinary_arn" {
-  value = module.secrets.cloudinary_api_arn
 }
